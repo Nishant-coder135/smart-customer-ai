@@ -164,7 +164,7 @@ pipeline_data = {}
 
 def init_pipeline():
     print("Initializing ML Pipeline...")
-    df = generate_synthetic_data(num_customers=5000, num_transactions=30000)
+    df = generate_synthetic_data(num_customers=2000, num_transactions=15000)
     rfm_original, rfm_scaled, scaler, pt = process_rfm(df)
     
     best_model_name, best_results, all_results = compare_and_select_best_model(rfm_scaled)

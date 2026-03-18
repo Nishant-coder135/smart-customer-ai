@@ -172,6 +172,7 @@ def predict_segment(input_data: PredictionInput):
          
     # 3. Analytics
     rfm_dict = input_df.iloc[0].to_dict()
+    df = pipeline_data['rfm']
     # Dummy calculation for single instance to keep it fast
     max_recency = df['Recency'].max()
     max_freq = df['Frequency'].max()
