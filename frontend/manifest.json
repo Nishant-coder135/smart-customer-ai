@@ -1,11 +1,13 @@
 {
+  "id": "smart-customer-ai",
   "short_name": "SmartCustomer",
   "name": "SmartCustomer AI Analytics",
   "description": "AI-powered customer intelligence and marketing recommendation platform.",
+  "categories": ["business", "productivity", "finance"],
   "icons": [
     {
       "src": "icon.png",
-      "sizes": "192x192",
+      "sizes": "48x48 72x72 96x96 128x128 192x192",
       "type": "image/png",
       "purpose": "any"
     },
@@ -24,9 +26,9 @@
   ],
   "start_url": "https://smart-customer-ai.onrender.com/",
   "display": "standalone",
-  "display_override": ["window-controls-overlay", "minimal-ui"],
   "orientation": "portrait",
   "theme_color": "#131416",
   "background_color": "#131416",
-  "scope": "https://smart-customer-ai.onrender.com/"
+  "scope": "https://smart-customer-ai.onrender.com/",
+  "prefer_related_applications": false
 }
