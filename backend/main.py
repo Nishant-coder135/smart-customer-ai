@@ -1,3 +1,10 @@
+import os
+import sys
+
+# CRITICAL: Fix imports when running as module (docker) or directly
+# This must happen BEFORE any local module imports
+sys.path.insert(0, os.path.dirname(__file__))
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -5,13 +12,8 @@ from pydantic import BaseModel
 import pandas as pd
 import numpy as np
 import uvicorn
-import os
-import sys
 from contextlib import asynccontextmanager
 from auth import create_user, authenticate_user, get_user_count
-
-# Fix imports when running as module (docker) or directly
-sys.path.insert(0, os.path.dirname(__file__))
 from ml_pipeline import init_pipeline, calculate_clv, calculate_churn_probability, get_pca_data
 from recommender import generate_recommendation, generate_campaign, assign_segment_labels, calculate_budget_allocation, get_business_insights, get_detailed_strategies
 
@@ -27,7 +29,7 @@ async def lifespan(app: FastAPI):
     # Cleanup on shutdown (if needed)
     pipeline_data.clear()
 
-app = FastAPI(title="SmartCustomer AI API", lifespan=lifespan)
+app = FastAPI(title="SmartCustomer AI API", version="2.1.0-final", lifespan=lifespan)
 
 # Enable CORS for all origins (production + local dev)
 app.add_middleware(
