@@ -40,11 +40,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Serve the frontend as a static site
-frontend_dir = os.path.join(os.path.dirname(__file__), "..", "frontend")
-frontend_dir = os.path.abspath(frontend_dir)
-if os.path.exists(frontend_dir):
-    app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")
+
 
 # --- Auth Models ---
 class UserAuth(BaseModel):
@@ -232,6 +228,12 @@ async def login(user: UserAuth):
     if not authenticate_user(user.username, user.password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     return {"message": "Login successful", "username": user.username}
+
+# Serve the frontend as a static site
+frontend_dir = os.path.join(os.path.dirname(__file__), "..", "frontend")
+frontend_dir = os.path.abspath(frontend_dir)
+if os.path.exists(frontend_dir):
+    app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
