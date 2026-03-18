@@ -4,6 +4,8 @@ const { useState, useEffect } = React;
 const IconDashboard = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>;
 const IconUsers = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>;
 const IconInsight = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m10 15 5 5 9-9"/><path d="m4 15 5 5 9-9"/><path d="m4 10 5 5"/></svg>;
+const IconMarket = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>;
+const IconAdmin = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>;
 const IconTheme = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>;
 
 // API Base URL - auto-detects local vs cloud deployment
@@ -13,7 +15,128 @@ const API_BASE = (isLocal && isDev)
   ? `http://${window.location.hostname}:8000/api`   // Local dev: point to separate backend
   : `${window.location.protocol}//${window.location.host}/api`; // Production: same-origin API
 
+// --- NEW COMPONENT: LOGIN / SIGNUP ---
+const AuthView = ({ onLogin, mode, setMode }) => {
+  const [formData, setFormData] = useState({ username: '', password: '', email: '' });
+  const [error, setError] = useState(null);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError(null);
+    const endpoint = mode === 'login' ? '/auth/login' : '/auth/signup';
+    try {
+      const res = await fetch(`${API_BASE}${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+      const data = await res.json();
+      if (res.ok) {
+        if (mode === 'login') onLogin(data.username);
+        else {
+          alert("Account created! Please login.");
+          setMode('login');
+        }
+      } else {
+        setError(data.detail || "Authentication failed");
+      }
+    } catch (err) {
+      setError("Server connection error");
+    }
+  };
+
+  return (
+    <div className="auth-container">
+      <div className="auth-card">
+        <div className="auth-header">
+          <h2>{mode === 'login' ? 'Welcome Back' : 'Join SmartCustomer'}</h2>
+          <p style={{color: 'var(--text-secondary)'}}>{mode === 'login' ? 'Sign in to access AI insights' : 'Scale your business with AI'}</p>
+        </div>
+        <form className="auth-form" onSubmit={handleSubmit}>
+          <input 
+            className="input-field" 
+            placeholder="Username" 
+            required 
+            value={formData.username}
+            onChange={e => setFormData({...formData, username: e.target.value})}
+          />
+          {mode === 'signup' && (
+            <input 
+              className="input-field" 
+              placeholder="Email (Optional)" 
+              type="email"
+              value={formData.email}
+              onChange={e => setFormData({...formData, email: e.target.value})}
+            />
+          )}
+          <input 
+            className="input-field" 
+            placeholder="Password" 
+            type="password" 
+            required 
+            value={formData.password}
+            onChange={e => setFormData({...formData, password: e.target.value})}
+          />
+          <button className="btn btn-primary" style={{marginTop: '0.5rem'}}>
+            {mode === 'login' ? 'Sign In' : 'Create Account'}
+          </button>
+          {error && <p style={{color: '#ef4444', textAlign: 'center', fontSize: '0.85rem'}}>{error}</p>}
+        </form>
+        <div className="auth-footer">
+          {mode === 'login' ? "Don't have an account?" : "Already have an account?"}
+          <button onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}>
+            {mode === 'login' ? 'Sign up' : 'Sign in'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// --- NEW COMPONENT: STRATEGIC ADVISOR ---
+const StrategicAdvisor = ({ strategies }) => {
+  if (!strategies) return <div className="glass-card">Analyzing market pillars...</div>;
+
+  return (
+    <div className="strategy-grid">
+      {Object.entries(strategies).map(([label, data]) => (
+        <div key={label} className="strategy-card">
+          <div className={`strategy-badge ${
+            label === 'VIP' ? 'badge-vip' : 
+            label === 'Churn Risk' ? 'badge-risk' : 
+            label === 'Regular' ? 'badge-growth' : 'badge-default'
+          }`}>
+            {label} Segment
+          </div>
+          <h3 style={{marginBottom: '0.5rem'}}>{data.StrategicPillar}</h3>
+          <p style={{fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem'}}>
+            Target: {data.CustomerCount} users • Avg Spend: ${data.AverageSpend}
+          </p>
+          
+          <div className="tactic-list">
+            {data.Tactics.map((t, i) => (
+              <div key={i} className="tactic-item">{t}</div>
+            ))}
+          </div>
+          
+          <div style={{marginTop: '1.5rem'}}>
+            <h4 style={{fontSize: '0.8rem', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '0.5rem'}}>Short Term Goal</h4>
+            <p style={{fontSize: '0.9rem'}}>{data.ShortTermGoal}</p>
+          </div>
+          
+          <div className="strategy-impact">
+            📈 {data.BusinessImpact}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 const App = () => {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [authMode, setAuthMode] = useState('login');
+  const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [theme, setTheme] = useState("dark");
   const [loading, setLoading] = useState(true);
@@ -22,6 +145,8 @@ const App = () => {
   const [kpis, setKpis] = useState(null);
   const [insights, setInsights] = useState(null);
   const [clusters, setClusters] = useState(null);
+  const [strategies, setStrategies] = useState(null);
+  const [adminStats, setAdminStats] = useState(null);
 
   const [installPrompt, setInstallPrompt] = useState(null);
   const [showInstallGuide, setShowInstallGuide] = useState(false);
@@ -50,19 +175,25 @@ const App = () => {
   };
 
   useEffect(() => {
+    if (!isLoggedIn) return;
+
     // Initial fetch
     const fetchDashboardData = async () => {
       setLoading(true);
       try {
-        const [kpiRes, insightsRes, clusterRes] = await Promise.all([
+        const [kpiRes, insightsRes, clusterRes, strategyRes, adminRes] = await Promise.all([
           fetch(`${API_BASE}/dashboard/kpis`),
           fetch(`${API_BASE}/advisor/insights`),
-          fetch(`${API_BASE}/dashboard/clusters`)
+          fetch(`${API_BASE}/dashboard/clusters`),
+          fetch(`${API_BASE}/advisor/strategies`),
+          fetch(`${API_BASE}/admin/stats`)
         ]);
         
         if(kpiRes.ok) setKpis(await kpiRes.json());
         if(insightsRes.ok) setInsights(await insightsRes.json());
         if(clusterRes.ok) setClusters(await clusterRes.json());
+        if(strategyRes.ok) setStrategies(await strategyRes.json());
+        if(adminRes.ok) setAdminStats(await adminRes.json());
         
       } catch (err) {
         console.error("Failed to connect to backend", err);
@@ -72,21 +203,40 @@ const App = () => {
     };
     
     fetchDashboardData();
-  }, []);
+  }, [isLoggedIn]);
 
   const formatCurrency = (val) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumSignificantDigits: 3 }).format(val);
   const formatNumber = (val) => new Intl.NumberFormat('en-US').format(val);
+
+  const handleLogin = (username) => {
+    setUser(username);
+    setIsLoggedIn(true);
+  };
+
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    setUser(null);
+    setActiveTab('dashboard');
+  };
+
+  if (!isLoggedIn) {
+      return <AuthView mode={authMode} setMode={setAuthMode} onLogin={handleLogin} />;
+  }
 
   return (
     <div className="app-container">
       {/* Sidebar - Desktop Only */}
       <aside className="sidebar">
         <div>
-          <div className="brand">
+          <div className="brand" style={{marginBottom: '1rem'}}>
             <div className="brand-icon">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
             </div>
             <span>SmartCustomer</span>AI
+          </div>
+          
+          <div style={{padding: '0 16px 20px 16px', fontSize: '0.8rem', color: 'var(--text-tertiary)'}}>
+            Welcome, <strong>{user}</strong>
           </div>
           
           <nav className="nav-menu">
@@ -94,15 +244,21 @@ const App = () => {
               <IconDashboard /> <span>Dashboard</span>
             </div>
             <div className={`nav-item ${activeTab === 'simulator' ? 'active' : ''}`} onClick={() => setActiveTab('simulator')}>
-              <IconUsers /> <span>Real-time Predictor</span>
+              <IconInsight /> <span>Real-time Predictor</span>
             </div>
-            <div className={`nav-item ${activeTab === 'advisor' ? 'active' : ''}`} onClick={() => setActiveTab('advisor')}>
-              <IconInsight /> <span>AI Business Advisor</span>
+            <div className={`nav-item ${activeTab === 'strategy' ? 'active' : ''}`} onClick={() => setActiveTab('strategy')}>
+              <IconMarket /> <span>Strategic Plans</span>
+            </div>
+            <div className={`nav-item ${activeTab === 'admin' ? 'active' : ''}`} onClick={() => setActiveTab('admin')}>
+              <IconAdmin /> <span>Developer Stats</span>
             </div>
           </nav>
         </div>
         
         <div style={{marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '8px'}}>
+          <button className="btn" onClick={handleLogout} style={{margin: '0 16px 8px 16px', background: 'var(--bg-surface-hover)'}}>
+            Logout
+          </button>
           {installPrompt && (
             <button className="btn btn-primary" onClick={handleInstallClick} style={{margin: '0 16px 8px 16px'}}>
               Install App
@@ -117,23 +273,16 @@ const App = () => {
       {/* Mobile Bottom Nav */}
       <nav className="mobile-nav">
         <div className={`mobile-nav-item ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => setActiveTab('dashboard')}>
-          <IconDashboard /> <span>Dashboard</span>
+          <IconDashboard /> <span>Home</span>
         </div>
         <div className={`mobile-nav-item ${activeTab === 'simulator' ? 'active' : ''}`} onClick={() => setActiveTab('simulator')}>
-          <IconUsers /> <span>Predict</span>
+          <IconInsight /> <span>Predict</span>
         </div>
-        {installPrompt ? (
-          <div className="mobile-nav-item" onClick={handleInstallClick} style={{color: 'var(--accent-primary)'}}>
-             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-             <span>Install</span>
-          </div>
-        ) : (
-          <div className={`mobile-nav-item ${activeTab === 'advisor' ? 'active' : ''}`} onClick={() => setActiveTab('advisor')}>
-            <IconInsight /> <span>AI Advisor</span>
-          </div>
-        )}
-        <div className="mobile-nav-item" onClick={toggleTheme}>
-          <IconTheme /> <span>Theme</span>
+        <div className={`mobile-nav-item ${activeTab === 'strategy' ? 'active' : ''}`} onClick={() => setActiveTab('strategy')}>
+          <IconMarket /> <span>Plans</span>
+        </div>
+        <div className={`mobile-nav-item ${activeTab === 'admin' ? 'active' : ''}`} onClick={() => setActiveTab('admin')}>
+          <IconAdmin /> <span>Dev</span>
         </div>
       </nav>
 
@@ -172,8 +321,22 @@ const App = () => {
           <div className="animate-fade-in">
             {/* View Switcher */}
             {activeTab === 'dashboard' && <DashboardView kpis={kpis} clusters={clusters} fCurrency={formatCurrency} fNum={formatNumber} />}
-            {activeTab === 'advisor' && <AdvisorView insights={insights} fCurrency={formatCurrency} />}
+            {activeTab === 'strategy' && (
+              <>
+                <header className="page-header">
+                  <div>
+                    <h1 className="page-title">Strategic Insights</h1>
+                    <p className="page-subtitle">AI-generated growth pillars and detailed action plans</p>
+                  </div>
+                </header>
+                <StrategicAdvisor strategies={strategies} />
+              </>
+            )}
             {activeTab === 'simulator' && <SimulatorView fCurrency={formatCurrency} />}
+            {activeTab === 'advisor' && <AdvisorView insights={insights} fCurrency={formatCurrency} />}
+            {activeTab === 'admin' && (
+              <AdminView stats={adminStats} />
+            )}
           </div>
         )}
       </main>
@@ -181,7 +344,32 @@ const App = () => {
   );
 };
 
-// --- Sub-Views ---
+// --- Admin Stats View ---
+const AdminView = ({ stats }) => {
+  if (!stats) return <div className="glass-card">Loading developer stats...</div>;
+  return (
+    <div className="glass-card">
+      <h2 style={{marginBottom: '2rem'}}>Developer Dashboard</h2>
+      <div className="kpi-grid">
+        <div className="glass-card" style={{background: 'var(--bg-main)'}}>
+          <div className="kpi-label">Total Users (JSON Store)</div>
+          <div className="kpi-stat">{stats.total_users}</div>
+          <p style={{fontSize: '0.8rem', color: 'var(--text-tertiary)', marginTop: '0.5rem'}}>Synced from backend/users.json</p>
+        </div>
+        <div className="glass-card" style={{background: 'var(--bg-main)'}}>
+          <div className="kpi-label">System Version</div>
+          <div className="kpi-stat" style={{fontSize: '1.5rem'}}>{stats.backend_version}</div>
+        </div>
+      </div>
+      <div style={{marginTop: '2rem', padding: '1rem', background: 'rgba(59, 130, 246, 0.05)', borderRadius: '1rem', border: '1px solid var(--accent-primary)'}}>
+        <h4 style={{color: 'var(--accent-primary)', marginBottom: '0.5rem'}}>Pro Tip:</h4>
+        <p style={{fontSize: '0.9rem', color: 'var(--text-secondary)'}}>
+          To keep these users permanently on Render, consider connecting a PostgreSQL database in the next update.
+        </p>
+      </div>
+    </div>
+  );
+};
 
 const DashboardView = ({ kpis, clusters, fCurrency, fNum }) => {
   if (!kpis) return <div>Data not available. Make sure Backend is running.</div>;

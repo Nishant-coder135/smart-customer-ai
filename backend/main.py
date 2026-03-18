@@ -8,11 +8,12 @@ import uvicorn
 import os
 import sys
 from contextlib import asynccontextmanager
+from auth import create_user, authenticate_user, get_user_count
 
 # Fix imports when running as module (docker) or directly
 sys.path.insert(0, os.path.dirname(__file__))
 from ml_pipeline import init_pipeline, calculate_clv, calculate_churn_probability, get_pca_data
-from recommender import generate_recommendation, generate_campaign, assign_segment_labels, calculate_budget_allocation, get_business_insights
+from recommender import generate_recommendation, generate_campaign, assign_segment_labels, calculate_budget_allocation, get_business_insights, get_detailed_strategies
 
 # Global State for the ML Pipeline
 pipeline_data = {}
@@ -42,6 +43,12 @@ frontend_dir = os.path.join(os.path.dirname(__file__), "..", "frontend")
 frontend_dir = os.path.abspath(frontend_dir)
 if os.path.exists(frontend_dir):
     app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")
+
+# --- Auth Models ---
+class UserAuth(BaseModel):
+    username: str
+    password: str
+    email: str = None
 
 # --- Pydantic Models ---
 class PredictionInput(BaseModel):
@@ -194,6 +201,34 @@ def predict_segment(input_data: PredictionInput):
         "Recommendation": recommendation,
         "CampaignSuggest": campaign
     }
+
+@app.get("/api/advisor/strategies")
+async def get_strategies():
+    if not pipeline_data:
+        raise HTTPException(status_code=503, detail="Pipeline not initialized")
+    return get_detailed_strategies(pipeline_data['rfm'])
+
+@app.get("/api/admin/stats")
+async def get_admin_stats():
+    return {
+        "total_users": get_user_count(),
+        "backend_version": "2.1.0-ai-enhanced",
+        "active_models": ["KMeans", "RFM", "CLV-Predictor"]
+    }
+
+# --- Authentication Endpoints ---
+@app.post("/api/auth/signup")
+async def signup(user: UserAuth):
+    success, message = create_user(user.username, user.email, user.password)
+    if not success:
+        raise HTTPException(status_code=400, detail=message)
+    return {"message": message}
+
+@app.post("/api/auth/login")
+async def login(user: UserAuth):
+    if not authenticate_user(user.username, user.password):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    return {"message": "Login successful", "username": user.username}
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))

@@ -122,7 +122,66 @@ def calculate_budget_allocation(df, total_budget=10000):
         
     return allocations
 
-# AI Business Advisor
+# AI Business Advisor - Detailed Strategic Insights
+def get_detailed_strategies(df):
+    labels = assign_segment_labels(df)
+    df['Segment_Label'] = df['Cluster'].map(labels)
+    
+    strategies = {}
+    for label in ["VIP", "Churn Risk", "Regular", "Low Value / Sleeping"]:
+        # Filter data for this segment
+        segment_df = df[df['Segment_Label'] == label]
+        if segment_df.empty:
+            continue
+            
+        avg_monetary = segment_df['Monetary'].mean()
+        count = len(segment_df)
+        
+        # Generation of detailed strategy based on segment behavior
+        if label == "VIP":
+            pillar = "Retention & Advocacy"
+            tactics = [
+                "Launch a 1-to-1 concierge service for top 1% of this group.",
+                "Implement a tiered rewards system where benefits increase with 'Loyalty Years'.",
+                "Request product referrals and feedback for 'Beta' features."
+            ]
+            short_term = "Increase purchase frequency by 10% through exclusive flash sales."
+        elif label == "Churn Risk":
+            pillar = "Recovery & Feedback"
+            tactics = [
+                "Automated 'We Miss You' email series with escalating discounts (10% -> 20%).",
+                "Direct outbound feedback calls for the top 10 most valuable at-risk customers.",
+                "Simplify the re-ordering process with one-click purchase links."
+            ]
+            short_term = "Recover 25% of at-risk revenue within the next 45 days."
+        elif label == "Regular":
+            pillar = "Growth & Upsell"
+            tactics = [
+                "Personalized product recommendations based on 'Often Bought Together' logic.",
+                "Cross-sell campaigns for complementary categories.",
+                "Introduce a 'Gold' membership status for customers who reach 10 lifetime purchases."
+            ]
+            short_term = "Shift 5% of this segment into the VIP category by Q3."
+        else: # Low Value
+            pillar = "Efficiency & Clearance"
+            tactics = [
+                "Automated clearance alerts for slow-moving inventory.",
+                "Low-cost re-engagement via push notifications only.",
+                "Identify and prune inactive accounts to save on marketing platform costs."
+            ]
+            short_term = "Convert one-time buyers to repeat buyers with low-margin offers."
+
+        strategies[label] = {
+            "StrategicPillar": pillar,
+            "CustomerCount": count,
+            "AverageSpend": round(avg_monetary, 2),
+            "Tactics": tactics,
+            "ShortTermGoal": short_term,
+            "BusinessImpact": f"Est. ${round(avg_monetary * count * 0.15, 2)} revenue growth potential."
+        }
+    
+    return strategies
+
 def get_business_insights(df):
     total_customers = len(df)
     high_churn_risk = len(df[df['Churn_Probability'] > 0.7])
@@ -134,15 +193,15 @@ def get_business_insights(df):
     top_revenue_cluster = df.groupby('Cluster')['Monetary'].sum().idxmax()
     top_revenue_label = labels.get(top_revenue_cluster, "Unknown")
     
+    avg_clv = df['CLV'].mean()
+    
     insights = [
-        f"Your churn risk customers currently make up {churn_rate:.1f}% of your base. Consider launching a win-back campaign immediately.",
-        f"Cluster {top_revenue_cluster} ({top_revenue_label}) is driving the most revenue. Focus your retention budget here.",
+        f"DATA ALERT: Your churn risk is at {churn_rate:.1f}%. A recovery campaign for {high_churn_risk} customers is recommended.",
+        f"REVENUE FOCUS: Segment '{top_revenue_label}' is your primary growth engine. Maintain a 95% satisfaction rate here.",
+        f"LIFETIME VALUE: Average predicted CLV across your base is ${avg_clv:.2f}. Each new customer adds significant long-term capital."
     ]
     
     if churn_rate > 15:
-         insights.append("WARNING: High churn detected. Review your onboarding or recent product changes.")
-         
-    clv_high = len(df[df['CLV_Segment'] == 'High'])
-    insights.append(f"You have {clv_high} highly valuable customers with excellent lifetime value predictions.")
+        insights.append("CRITICAL: Segment destabilization detected. Check recent competitor pricing.")
     
     return insights
