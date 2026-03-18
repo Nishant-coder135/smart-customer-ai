@@ -1,6 +1,7 @@
 import json
 import os
 import hashlib
+import pandas as pd
 
 USERS_FILE = os.path.join(os.path.dirname(__file__), "users.json")
 
