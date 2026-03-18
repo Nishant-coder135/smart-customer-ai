@@ -22,11 +22,11 @@
       "purpose": "any"
     }
   ],
-  "start_url": "./index.html",
+  "start_url": "https://smart-customer-ai.onrender.com/",
   "display": "standalone",
   "display_override": ["window-controls-overlay", "minimal-ui"],
   "orientation": "portrait",
   "theme_color": "#131416",
   "background_color": "#131416",
-  "scope": "/"
+  "scope": "https://smart-customer-ai.onrender.com/"
 }
