@@ -2,18 +2,21 @@
   "id": "smart-customer-ai",
   "short_name": "SmartCustomer",
   "name": "SmartCustomer AI Analytics",
+  "lang": "en",
+  "dir": "ltr",
   "description": "AI-powered customer intelligence and marketing recommendation platform.",
-  "categories": ["business", "productivity", "finance"],
+  "categories": ["business", "productivity", "finance", "notes"],
+  "iarc_rating_id": "e98e-42b7-876a-54321",
   "icons": [
     {
       "src": "icon.png",
-      "sizes": "192x192",
+      "sizes": "640x640",
       "type": "image/png",
       "purpose": "any"
     },
     {
       "src": "icon.png",
-      "sizes": "512x512",
+      "sizes": "640x640",
       "type": "image/png",
       "purpose": "maskable"
     }
@@ -21,27 +24,73 @@
   "screenshots": [
     {
       "src": "ss1.png",
-      "sizes": "1920x1080",
+      "sizes": "2884x1644",
       "type": "image/png",
-      "form_factor": "wide"
+      "form_factor": "wide",
+      "label": "Executive Dashboard"
     },
     {
       "src": "ss_mobile.png",
-      "sizes": "390x844",
+      "sizes": "1000x1502",
       "type": "image/png",
-      "form_factor": "narrow"
+      "form_factor": "narrow",
+      "label": "Mobile Experience"
     }
   ],
   "start_url": "https://smart-customer-ai.onrender.com/",
   "display": "standalone",
-  "display_override": ["window-controls-overlay", "standalone", "browser"],
+  "display_override": ["window-controls-overlay", "standalone", "browser", "tabbed"],
   "orientation": "portrait",
   "theme_color": "#131416",
   "background_color": "#131416",
   "scope": "https://smart-customer-ai.onrender.com/",
+  "scope_extensions": [
+    {
+      "origin": "https://smart-customer-ai.onrender.com"
+    }
+  ],
   "prefer_related_applications": false,
+  "related_applications": [],
   "launch_handler": {
     "client_mode": "navigate-existing"
+  },
+  "file_handlers": [
+    {
+      "action": "/?file",
+      "accept": {
+        "text/csv": [".csv"],
+        "application/json": [".json"]
+      }
+    }
+  ],
+  "protocol_handlers": [
+    {
+      "protocol": "web+smartcustomer",
+      "url": "/?p=%s"
+    }
+  ],
+  "widgets": [
+    {
+      "name": "Customer Insights",
+      "short_name": "Insights",
+      "description": "Quick view of business insights from AI Assistant.",
+      "icons": [
+        {
+          "src": "icon.png",
+          "sizes": "640x640",
+          "type": "image/png"
+        }
+      ],
+      "tag": "insights",
+      "template": "widget-template",
+      "data": "widget-data",
+      "type": "application/json",
+      "auth": false,
+      "update": 3600
+    }
+  ],
+  "edge_side_panel": {
+    "preferred_width": 400
   },
   "shortcuts": [
     {
@@ -49,21 +98,21 @@
       "short_name": "Dashboard",
       "description": "View real-time KPIs and customer segments",
       "url": "https://smart-customer-ai.onrender.com/",
-      "icons": [{"src": "icon.png", "sizes": "192x192"}]
+      "icons": [{"src": "icon.png", "sizes": "640x640"}]
     },
     {
       "name": "Customer Predictor",
       "short_name": "Predict",
       "description": "Predict customer churn and segment in real-time",
       "url": "https://smart-customer-ai.onrender.com/?tab=simulator",
-      "icons": [{"src": "icon.png", "sizes": "192x192"}]
+      "icons": [{"src": "icon.png", "sizes": "640x640"}]
     },
     {
       "name": "AI Business Advisor",
       "short_name": "Advisor",
       "description": "Get AI-generated business insights and budget recommendations",
       "url": "https://smart-customer-ai.onrender.com/?tab=advisor",
-      "icons": [{"src": "icon.png", "sizes": "192x192"}]
+      "icons": [{"src": "icon.png", "sizes": "640x640"}]
     }
   ],
   "share_target": {
