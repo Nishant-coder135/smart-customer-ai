@@ -43,21 +43,13 @@
       "label": "Mobile Experience"
     }
   ],
-  "start_url": "/",
-  "display": "standalone",
-  "display_override": ["window-controls-overlay", "tabbed", "standalone"],
-  "orientation": "any",
-  "theme_color": "#131416",
-  "background_color": "#131416",
   "scope": "/",
   "scope_extensions": [
-    {
-      "origin": "https://smart-customer-ai-4.onrender.com"
-    },
-    {
-      "origin": "https://smart-customer-ai.onrender.com"
-    }
+    { "origin": "https://smart-customer-ai.onrender.com" },
+    { "origin": "https://smart-customer-ai-2.onrender.com" },
+    { "origin": "https://smart-customer-ai-4.onrender.com" }
   ],
+  "start_url": "/",
   "prefer_related_applications": false,
   "related_applications": [
     {
