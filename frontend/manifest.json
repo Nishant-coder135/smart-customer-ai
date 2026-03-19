@@ -59,7 +59,13 @@
     }
   ],
   "prefer_related_applications": false,
-  "related_applications": [],
+  "related_applications": [
+    {
+      "platform": "play",
+      "url": "https://play.google.com/store/apps/details?id=com.smartcustomer.ai",
+      "id": "com.smartcustomer.ai"
+    }
+  ],
   "launch_handler": {
     "client_mode": "navigate-existing"
   },
