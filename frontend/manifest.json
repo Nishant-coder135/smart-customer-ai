@@ -52,6 +52,14 @@
   "start_url": "/",
   "display": "standalone",
   "display_override": ["window-controls-overlay", "tabbed", "standalone"],
+  "tab_strip": {
+    "home_tab": {
+      "visibility": "auto"
+    },
+    "new_tab_button": {
+      "visibility": "auto"
+    }
+  },
   "orientation": "any",
   "theme_color": "#131416",
   "background_color": "#131416",
