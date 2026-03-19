@@ -60,6 +60,9 @@
       "visibility": "auto"
     }
   },
+  "note_taking": {
+    "new_note_url": "/?tab=advisor"
+  },
   "orientation": "any",
   "theme_color": "#131416",
   "background_color": "#131416",
