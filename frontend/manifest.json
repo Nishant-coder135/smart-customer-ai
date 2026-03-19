@@ -37,13 +37,13 @@
       "label": "Mobile Experience"
     }
   ],
-  "start_url": "https://smart-customer-ai.onrender.com/",
+  "start_url": "/",
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone", "browser", "tabbed"],
   "orientation": "portrait",
   "theme_color": "#131416",
   "background_color": "#131416",
-  "scope": "https://smart-customer-ai.onrender.com/",
+  "scope": "/",
   "scope_extensions": [
     {
       "origin": "https://smart-customer-ai.onrender.com"
@@ -97,26 +97,26 @@
       "name": "Executive Dashboard",
       "short_name": "Dashboard",
       "description": "View real-time KPIs and customer segments",
-      "url": "https://smart-customer-ai.onrender.com/",
+      "url": "/",
       "icons": [{"src": "icon.png", "sizes": "512x512 640x640"}]
     },
     {
       "name": "Customer Predictor",
       "short_name": "Predict",
       "description": "Predict customer churn and segment in real-time",
-      "url": "https://smart-customer-ai.onrender.com/?tab=simulator",
+      "url": "/?tab=simulator",
       "icons": [{"src": "icon.png", "sizes": "512x512 640x640"}]
     },
     {
       "name": "AI Business Advisor",
       "short_name": "Advisor",
       "description": "Get AI-generated business insights and budget recommendations",
-      "url": "https://smart-customer-ai.onrender.com/?tab=advisor",
+      "url": "/?tab=advisor",
       "icons": [{"src": "icon.png", "sizes": "512x512 640x640"}]
     }
   ],
   "share_target": {
-    "action": "https://smart-customer-ai.onrender.com/",
+    "action": "/",
     "method": "GET",
     "params": {
       "title": "title",
