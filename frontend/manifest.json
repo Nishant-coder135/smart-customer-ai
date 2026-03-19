@@ -10,13 +10,13 @@
   "icons": [
     {
       "src": "icon.png",
-      "sizes": "640x640",
+      "sizes": "512x512 640x640",
       "type": "image/png",
       "purpose": "any"
     },
     {
       "src": "icon.png",
-      "sizes": "640x640",
+      "sizes": "512x512 640x640",
       "type": "image/png",
       "purpose": "maskable"
     }
@@ -77,7 +77,7 @@
       "icons": [
         {
           "src": "icon.png",
-          "sizes": "640x640",
+          "sizes": "512x512 640x640",
           "type": "image/png"
         }
       ],
@@ -98,21 +98,21 @@
       "short_name": "Dashboard",
       "description": "View real-time KPIs and customer segments",
       "url": "https://smart-customer-ai.onrender.com/",
-      "icons": [{"src": "icon.png", "sizes": "640x640"}]
+      "icons": [{"src": "icon.png", "sizes": "512x512 640x640"}]
     },
     {
       "name": "Customer Predictor",
       "short_name": "Predict",
       "description": "Predict customer churn and segment in real-time",
       "url": "https://smart-customer-ai.onrender.com/?tab=simulator",
-      "icons": [{"src": "icon.png", "sizes": "640x640"}]
+      "icons": [{"src": "icon.png", "sizes": "512x512 640x640"}]
     },
     {
       "name": "AI Business Advisor",
       "short_name": "Advisor",
       "description": "Get AI-generated business insights and budget recommendations",
       "url": "https://smart-customer-ai.onrender.com/?tab=advisor",
-      "icons": [{"src": "icon.png", "sizes": "640x640"}]
+      "icons": [{"src": "icon.png", "sizes": "512x512 640x640"}]
     }
   ],
   "share_target": {

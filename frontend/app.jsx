@@ -156,6 +156,13 @@ const App = () => {
       e.preventDefault();
       setInstallPrompt(e);
     });
+
+    // Handle deep links/shortcuts
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab');
+    if (tab && ['dashboard', 'simulator', 'strategy', 'admin', 'advisor'].includes(tab)) {
+      setActiveTab(tab);
+    }
   }, []);
 
   const handleInstallClick = async () => {
