@@ -9,3 +9,6 @@ python-jose[cryptography]
 bcrypt
 python-dotenv
 google-genai
+langchain-google-genai
+langchain-core
+elevenlabs
