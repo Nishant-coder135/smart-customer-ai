@@ -12,9 +12,9 @@ from database import get_db, UrbanSessionLocal, RuralSessionLocal
 import models
 
 # Secret key for JWT
-SECRET_KEY = os.environ.get("SECRET_KEY")
-if not SECRET_KEY:
-    raise RuntimeError("SECRET_KEY must be set in environment variables.")
+SECRET_KEY = os.environ.get("SECRET_KEY", "smartcustomer_ai_default_secret_key_998877")
+if SECRET_KEY == "smartcustomer_ai_default_secret_key_998877":
+    print("[WARNING] SECRET_KEY not found in environment variables. Using fallback default. Ensure you set this in production.")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7 # 7 days
 
