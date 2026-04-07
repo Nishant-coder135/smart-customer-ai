@@ -1,0 +1,283 @@
+🎯 CORE GOAL:
+
+Build a production-grade mobile + backend system that acts as a daily AI business manager for small and medium businesses.
+
+The system must answer daily:
+
+👉 “What should I do TODAY to grow my business, why, and what result will I get?”
+
+🏗️ SYSTEM ARCHITECTURE (MANDATORY)
+Backend:
+FastAPI (Python)
+Async APIs
+JWT Authentication
+Database:
+Urban Mode → PostgreSQL
+Rural Mode → SQLite (fully isolated)
+Cache:
+Redis (for recommendations, sessions)
+Background Jobs:
+Celery (or FastAPI BackgroundTasks for MVP)
+ML Layer:
+Separate service/module:
+Segmentation
+Prediction
+Recommendation Engine
+Integrations:
+SMS → Twilio / MSG91
+WhatsApp → WhatsApp Business API
+Notifications → Firebase Cloud Messaging
+🗂️ DATABASE DESIGN (STRICT)
+Users
+id
+name
+phone
+password_hash
+business_type (urban/rural)
+Customers
+id
+user_id
+name
+phone
+last_purchase_date
+total_spent
+visit_frequency
+credit_balance
+Transactions
+id
+customer_id
+amount
+date
+Actions
+id
+user_id
+action_text
+target_segment
+expected_revenue
+expected_retention
+confidence_score
+created_at
+ActionExecution
+id
+action_id
+executed_at
+channel (sms/whatsapp/manual)
+Outcomes
+id
+action_id
+actual_revenue
+actual_retention
+response_rate
+measured_at
+🤖 ML PIPELINE (MANDATORY)
+1. Segmentation
+K-Means clustering
+Features:
+total_spent
+frequency
+recency
+Output:
+VIP
+Regular
+Low Value
+Churn Risk
+2. Prediction
+Model:
+Regression (Linear / XGBoost)
+Predict:
+Future revenue
+Churn probability
+3. Recommendation Engine (CORE)
+
+Generate multiple actions:
+
+Each action must include:
+
+Action
+Target
+Reason
+Expected impact
+Confidence score
+Scoring Formula:
+
+Score =
+(Revenue Impact × 0.5) +
+(Retention Impact × 0.3) +
+(Risk Reduction × 0.2)
+
+👉 Return TOP 3–5 actions only
+
+4. Learning Loop (VERY IMPORTANT)
+
+After outcomes:
+
+Update:
+
+Action success rate
+Confidence recalibration
+
+👉 System must improve over time
+
+📱 MOBILE APPLICATION (FRONTEND)
+
+Framework:
+
+Flutter (recommended) OR React Native
+🔐 AUTH SYSTEM
+Signup / Login
+JWT-based session
+Secure password hashing (bcrypt)
+Logout
+🧭 SMART ONBOARDING
+
+Step 1: Select mode (Urban / Rural)
+Step 2: Add data (CSV/manual)
+Step 3: Run instant analysis
+Step 4: Show first insight within 30 seconds
+
+🧭 MAIN NAVIGATION
+Dashboard
+Actions ⭐
+Analytics
+Customers
+AI Advisor
+Profile
+⭐ ACTIONS SCREEN (CORE)
+
+Display “Today’s Action Plan”
+
+Each action card MUST include:
+
+Action
+Target segment
+Reason (based on data)
+Expected impact:
+Revenue
+Retention
+Confidence score
+Timeframe
+
+Button:
+👉 [Execute Action]
+
+⚡ EXECUTION SYSTEM (REAL, NOT FAKE)
+
+When clicked:
+
+Generate:
+SMS text
+WhatsApp message
+Provide:
+“Send via SMS”
+“Send via WhatsApp”
+
+Use APIs:
+
+Twilio / MSG91
+📊 OUTCOME TRACKING (CRITICAL)
+
+Track:
+
+Action execution
+Time
+
+After delay:
+
+Show:
+
+Expected vs Actual
+
+Example:
+Expected: ₹20,000
+Actual: ₹15,000
+
+📊 BUSINESS HEALTH SCORE
+
+Score: 1–100
+
+Based on:
+
+Revenue trend
+Churn rate
+Customer growth
+
+Also show:
+👉 “What is hurting your score?”
+
+🔔 SMART ALERT SYSTEM
+High churn → Red
+Revenue drop → Yellow
+Growth → Green
+💳 CREDIT TRACKING
+Total credit
+High-risk customers
+Payment delays
+👥 PERSONA SYSTEM
+
+Segments:
+
+VIP
+Regular
+Low Value
+Churn Risk
+
+Each must show:
+
+Behavior
+Action to take
+📈 ANALYTICS
+
+Urban:
+
+Charts
+PCA visualization
+
+Rural:
+
+Simple metrics
+Icons (no complex graphs)
+🧠 AI BUSINESS ADVISOR (CHAT)
+
+User asks:
+👉 “Why is revenue low?”
+
+Response format:
+
+Problem
+Reason
+Action
+Expected result
+
+(3–5 lines, structured)
+
+🌦️ SEASONAL ENGINE
+Detect trends
+Suggest timing-based actions
+⚙️ SETTINGS
+Theme
+Language
+Notifications
+Data reset
+Logout
+🎨 UI RULES
+Clean
+Card-based
+Minimal clutter
+Large buttons (Rural)
+Smooth animations
+🚫 STRICT RULES
+NO UI without backend logic
+NO random recommendations
+ALL actions must be explainable
+Urban & Rural data MUST be isolated
+System must LEARN from outcomes
+🎯 FINAL OUTPUT
+
+The system must:
+
+Tell user what to do
+Help execute
+Track results
+Improve decisions
+
+👉 It must feel like a real business manager

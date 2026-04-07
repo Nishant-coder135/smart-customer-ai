@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en-IN">
+<head>
+    <meta charset="UTF-8">
+    <!-- Full mobile viewport with content fitting and notch support -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    
+    <!-- SEO & Description -->
+    <title>SmartCustomer AI - Business Growth Platform</title>
+    <meta name="description" content="AI-powered customer intelligence platform for Urban and Rural businesses. Get ML-driven growth strategies, festival actions, and customer analytics.">
+    <meta name="keywords" content="business analytics, customer intelligence, AI advisor, rural business, urban retail, India">
+    <meta name="author" content="SmartCustomer AI">
+    
+    <!-- Multi-Platform Theme Color Management (Android, iOS, Windows) -->
+    <meta name="apple-mobile-web-app-status-bar-style" id="apple-theme-meta" content="black-translucent">
+    <meta name="msapplication-navbutton-color" id="ms-theme-meta" content="#6366f1">
+    <script>
+        (function() {
+            // Dynamically create theme-color meta to prevent IDE warnings about browser support
+            let meta = document.createElement('meta');
+            meta.name = 'theme-color';
+            meta.id = 'theme-meta';
+            document.head.appendChild(meta);
+            
+            const msMeta = document.getElementById('ms-theme-meta');
+            const updateTheme = (e) => {
+                const isDark = e ? e.matches : window.matchMedia('(prefers-color-scheme: dark)').matches;
+                const color = isDark ? '#1a1a2e' : '#6366f1';
+                meta.setAttribute('content', color);
+                if (msMeta) msMeta.setAttribute('content', color);
+            };
+            const mq = window.matchMedia('(prefers-color-scheme: dark)');
+            mq.addEventListener('change', updateTheme);
+            updateTheme();
+        })();
+    </script>
+    
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Apple PWA Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="SmartCustomer AI">
+    <link rel="apple-touch-icon" href="assets/icon-192.png">
+    
+    <!-- Microsoft / General PWA -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="SmartCustomer AI">
+    <meta name="msapplication-TileImage" content="assets/icon-192.png">
+    <meta name="msapplication-TileColor" content="#1a1a2e">
+    
+    <!-- Open Graph for sharing -->
+    <meta property="og:title" content="SmartCustomer AI - Business Growth Platform">
+    <meta property="og:description" content="AI-powered customer intelligence for Indian businesses">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="assets/icon-512.png">
+    
+    <!-- Preconnect for performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://unpkg.com">
+    
+    <!-- Favicon & Icons -->
+    <link rel="icon" type="image/png" href="assets/icon-192.png">
+    <link rel="shortcut icon" href="assets/icon-192.png">
+    
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- Boxicons via Cloudflare CDN (More reliable for tracking prevention) -->
+    <link href='https://cdnjs.cloudflare.com/ajax/libs/boxicons/2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    
+    <!-- Plotly (async / deferred) - Modern Pinned Version -->
+    <script src="https://cdn.plot.ly/plotly-2.32.0.min.js" defer></script>
+
+    <!-- Inline critical style to prevent FOUC -->
+    <style>
+        body { background: #1a1a2e; }
+        @media (prefers-color-scheme: light) { body { background: hsl(210, 40%, 98%); } }
+        .loader-container { display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; gap: 1.5rem; }
+        .loader { width: 54px; height: 54px; border: 6px solid rgba(99,102,241,0.15); border-bottom-color: #6366f1; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- Auth View or App Shell will be injected here -->
+        <div class="loader-container"><div class="loader"></div></div>
+    </div>
+
+    <!-- Core Logic (Load order matters) -->
+    <script src="js/api.js?v=9"></script>
+    <script src="js/i18n.js?v=9"></script>
+
+    <!-- Views (Must be loaded BEFORE app.js for routing to work during init) -->
+    <script src="js/views/login.js?v=9"></script>
+    <script src="js/views/dashboard.js?v=9"></script>
+    <script src="js/views/actions.js?v=9"></script>
+    <script src="js/views/data_ingest.js?v=9"></script>
+    <script src="js/views/customers.js?v=9"></script>
+    <script src="js/views/analytics.js?v=9"></script>
+    <script src="js/views/predict.js?v=9"></script>
+    <script src="js/views/simulator.js?v=9"></script>
+    <script src="js/views/compare.js?v=9"></script>
+    <script src="js/views/quality.js?v=9"></script>
+    <script src="js/views/anomaly.js?v=9"></script>
+    <script src="js/views/export.js?v=9"></script>
+    <script src="js/views/advisor.js?v=9"></script>
+    <script src="js/views/settings.js?v=9"></script>
+
+    <!-- App Router -->
+    <script src="js/app.js?v=9"></script>
+
+    <!-- PWA Service Worker Registration + Install Prompt -->
+    <script>
+        // ── Service Worker Registration ──────────────────────────────────────────
+        // ── NUCLEAR CACHE PURGE: Unregister old problematic SW ────────────────────
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                for(let registration of registrations) {
+                    registration.unregister().then(() => console.log('[PWA] Stale SW purged.'));
+                }
+            });
+        }
+
+        // ── PWA Install Prompt Capture ───────────────────────────────────────────
+        // Capture the beforeinstallprompt event globally so app.js can use it
+        window._pwaInstallPrompt = null;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault(); // Prevent auto-prompt
+            window._pwaInstallPrompt = e;
+            // Notify app.js if it's already rendered
+            if (typeof window._onInstallPromptReady === 'function') {
+                window._onInstallPromptReady();
+            }
+        });
+
+        // When app is installed, hide install button
+        window.addEventListener('appinstalled', () => {
+            window._pwaInstallPrompt = null;
+            const installBtn = document.getElementById('pwa-install-btn');
+            if (installBtn) installBtn.style.display = 'none';
+            console.log('[PWA] App installed successfully');
+        });
+    </script>
+</body>
+</html>

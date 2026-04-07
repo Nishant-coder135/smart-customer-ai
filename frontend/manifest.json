@@ -1,0 +1,64 @@
+{
+  "name": "SmartCustomer AI",
+  "short_name": "SmartCust AI",
+  "description": "AI-powered customer intelligence platform for Urban and Rural businesses. Get ML-driven growth strategies, festival actions, and real-time analytics.",
+  "id": "/",
+  "start_url": "./",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1a1a2e",
+  "theme_color": "#6366f1",
+  "lang": "en-IN",
+  "dir": "ltr",
+  "categories": ["business", "finance", "productivity"],
+  "icons": [
+    {
+      "src": "assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Dash",
+      "description": "View your business dashboard",
+      "url": "./?tab=dashboard",
+      "icons": [{ "src": "assets/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Log Sale",
+      "short_name": "Add Sale",
+      "description": "Log a new transaction",
+      "url": "./?tab=data",
+      "icons": [{ "src": "assets/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "AI Advisor",
+      "short_name": "Advisor",
+      "description": "Get AI business strategy",
+      "url": "./?tab=advisor",
+      "icons": [{ "src": "assets/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

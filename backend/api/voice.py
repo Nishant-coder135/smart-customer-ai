@@ -1,0 +1,76 @@
+from fastapi import APIRouter, Depends, HTTPException, Response
+from pydantic import BaseModel
+import os
+from api.auth import get_current_user
+import models
+from elevenlabs import ElevenLabs
+
+router = APIRouter()
+
+# Environment-based configuration
+ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY", "")
+DEFAULT_VOICE_ID = "nPczCjzI2ndSTrZfghLp" # "Callum" - Professional/Narrative
+
+class VoiceRequest(BaseModel):
+    text: str
+
+@router.post("/synthesize")
+def synthesize_voice(req: VoiceRequest, user: models.User = Depends(get_current_user)):
+    """
+    Converts text to speech using ElevenLabs. 
+    Includes a 'Professional Simulation' mode if the API key is missing.
+    """
+    if not ELEVENLABS_API_KEY:
+        # PROFESSIONAL SIMULATION MODE
+        # We return a 1-second silent MP3 buffer to allow the UI to trigger its fallback.
+        print("[Voice] ELEVENLABS_API_KEY not found. Running in Intelligence Simulation Mode.")
+        
+        # A tiny valid MP3 header for "silence" - padded to 1KB for browser compatibility
+        silent_mp3_hex = (
+            "ff f3 40 c4 00 00 00 03 48 00 00 00 00 4c 41 4d 45 33 2e 39 38 2e 34"
+        ).replace(" ", "")
+        audio_data = bytes.fromhex(silent_mp3_hex) + (b"\x00" * 1024)
+        
+        return Response(
+            content=audio_data, 
+            media_type="audio/mpeg",
+            headers={"X-AI-Status": "simulation"}
+        )
+
+    try:
+        from elevenlabs.client import ElevenLabs
+        client = ElevenLabs(api_key=ELEVENLABS_API_KEY)
+        
+        # ELEVENLABS V1.x: Fetch available voices to ensure we don't get 'voice_not_found'
+        try:
+            voices_response = client.voices.get_all()
+            available_ids = [v.voice_id for v in voices_response.voices]
+            voice_id = DEFAULT_VOICE_ID if DEFAULT_VOICE_ID in available_ids else (available_ids[0] if available_ids else None)
+            if not voice_id:
+                raise Exception("No voices available in this ElevenLabs account.")
+        except Exception as ve:
+            print(f"[ElevenLabs Voice Check Error] {ve}")
+            voice_id = DEFAULT_VOICE_ID # fallback to attempt anyway
+
+        # ElevenLabs v1.0+ uses text_to_speech.convert
+        audio_generator = client.text_to_speech.convert(
+            text=req.text,
+            voice_id=voice_id,
+            model_id="eleven_multilingual_v2"
+        )
+        
+        # convert generator to bytes
+        audio_data = b"".join(audio_generator)
+
+
+        
+        if not audio_data:
+            raise Exception("Empty audio data received from ElevenLabs")
+            
+        return Response(content=audio_data, media_type="audio/mpeg")
+    except Exception as e:
+        print(f"[ElevenLabs Error] {e}")
+        # Fallback to simulation bytes to trigger frontend browser speech fallback
+        silent_mp3_hex = "ff f3 40 c4 00 00 00 03 48 00 00 00 00 4c 41 4d 45 33 2e 39 38 2e 34"
+        audio_data = bytes.fromhex(silent_mp3_hex) + (b"\x00" * 1024)
+        return Response(content=audio_data, media_type="audio/mpeg", headers={"X-AI-Status": "simulation", "X-AI-Error": str(e)})

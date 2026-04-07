@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+scikit-learn
+pandas
+SQLAlchemy
+psycopg2-binary
+python-multipart
+python-jose[cryptography]
+bcrypt
+python-dotenv
+google-genai
