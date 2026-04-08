@@ -14,25 +14,25 @@
   "categories": ["business", "finance", "productivity"],
   "icons": [
     {
-      "src": "assets/icon-192.png",
+      "src": "assets/icon-192-v2.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "assets/icon-192.png",
+      "src": "assets/icon-192-v2.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "assets/icon-512.png",
+      "src": "assets/icon-512-v2.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "assets/icon-512.png",
+      "src": "assets/icon-512-v2.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
@@ -44,21 +44,21 @@
       "short_name": "Dash",
       "description": "View your business dashboard",
       "url": "./?tab=dashboard",
-      "icons": [{ "src": "assets/icon-192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "assets/icon-192-v2.png", "sizes": "192x192" }]
     },
     {
       "name": "Log Sale",
       "short_name": "Add Sale",
       "description": "Log a new transaction",
       "url": "./?tab=data",
-      "icons": [{ "src": "assets/icon-192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "assets/icon-192-v2.png", "sizes": "192x192" }]
     },
     {
       "name": "AI Advisor",
       "short_name": "Advisor",
       "description": "Get AI business strategy",
       "url": "./?tab=advisor",
-      "icons": [{ "src": "assets/icon-192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "assets/icon-192-v2.png", "sizes": "192x192" }]
     }
   ],
   "display_override": ["standalone", "window-controls-overlay"],
