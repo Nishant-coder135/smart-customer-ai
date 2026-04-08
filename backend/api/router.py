@@ -149,25 +149,34 @@ async def upload_csv(file: UploadFile = File(...), user: models.User = Depends(g
         db.query(models.Transaction).filter(models.Transaction.user_id == user.id, models.Transaction.business_mode == "urban").delete()
         db.commit()
         
-        # 3. Bulk Insert Customers (Fast Path)
-        cust_records = []
-        for cid, r in rfm_df.iterrows():
-            cust_records.append({
-                "user_id": user.id,
-                "customer_id": str(cid),
-                "recency": float(r['recency']),
-                "frequency": float(r['frequency']),
-                "monetary": float(r['monetary']),
-                "cluster_label": str(r['cluster']),
-                "segment_name": str(r['segment_name']),
-                "churn_probability": float(r['churn_probability']),
-                "clv": float(r['clv']),
-                "purchase_trend": str(r['purchase_trend']),
-                "explained_why": str(r['explained_why'])
-            })
-        db.bulk_insert_mappings(models.Customer, cust_records)
+        # --- PHARSE 3: BATCH INSERT CUSTOMERS ---
+        import gc
+        gc.collect() # Deep clean before DB heavy lifting
         
-        # 4. Bulk Insert Segments
+        batch_size = 5000
+        for i in range(0, len(rfm_df), batch_size):
+            chunk = rfm_df.iloc[i:i + batch_size]
+            cust_batch = []
+            for cid, r in chunk.iterrows():
+                cust_batch.append({
+                    "user_id": user.id,
+                    "customer_id": str(cid),
+                    "recency": float(r['recency']),
+                    "frequency": float(r['frequency']),
+                    "monetary": float(r['monetary']),
+                    "cluster_label": str(r['cluster']),
+                    "segment_name": str(r['segment_name']),
+                    "churn_probability": float(r['churn_probability']),
+                    "clv": float(r['clv']),
+                    "purchase_trend": str(r['purchase_trend']),
+                    "explained_why": str(r['explained_why'])
+                })
+            db.bulk_insert_mappings(models.Customer, cust_batch)
+            db.commit()
+            del cust_batch
+            gc.collect()
+
+        # --- PHASE 4: INSERT SEGMENT AGGREGATES ---
         summary = rfm_df.groupby('segment_name').agg({
             'recency': 'mean', 'frequency': 'mean', 'monetary': 'mean'
         }).reset_index()
@@ -183,29 +192,35 @@ async def upload_csv(file: UploadFile = File(...), user: models.User = Depends(g
                 "avg_monetary": float(r['monetary'])
             })
         db.bulk_insert_mappings(models.Segment, seg_records)
-        
-        # 5. Bulk Insert Transactions (Turbo Vectorized Path)
-        # Only keep necessary columns for speed
-        tx_df = df[['CustomerID', 'InvoiceDate', 'Quantity', 'UnitPrice']].copy()
-        tx_df['user_id'] = user.id
-        tx_df['invoice_date'] = pd.to_datetime(tx_df['InvoiceDate'])
-        tx_df['quantity'] = tx_df['Quantity'].astype(int)
-        tx_df['unit_price'] = tx_df['UnitPrice'].astype(float)
-        tx_df['total_price'] = tx_df['quantity'] * tx_df['unit_price']
-        tx_df['customer_id'] = tx_df['CustomerID'].astype(str)
-        tx_df['is_credit'] = 0
-        tx_df['business_mode'] = "urban"
-        
-        # Drop temporary processing columns
-        tx_records = tx_df[['user_id', 'customer_id', 'invoice_date', 'quantity', 'unit_price', 'total_price', 'is_credit', 'business_mode']].to_dict('records')
-        
-        db.bulk_insert_mappings(models.Transaction, tx_records)
         db.commit()
         
-        # CLEAR CACHE to ensure immediate dashboard update
-        clear_dashboard_cache(user.id)
+        # --- PHASE 5: TURBO CHUNKED TRANSACTION INSERTION ---
+        # Normalize in-place to save memory
+        df['user_id'] = user.id
+        df['invoice_date'] = pd.to_datetime(df['InvoiceDate'], errors='coerce')
+        df['quantity'] = pd.to_numeric(df['Quantity'], errors='coerce').fillna(0).astype(int)
+        df['unit_price'] = pd.to_numeric(df['UnitPrice'], errors='coerce').fillna(0).astype(float)
+        df['total_price'] = df['quantity'] * df['unit_price']
+        df['customer_id'] = df['CustomerID'].astype(str)
+        df['is_credit'] = 0
+        df['business_mode'] = "urban"
+
+        # Direct Chunked Insertion (No monolithic records list)
+        tx_batch_size = 10000
+        cols_to_save = ['user_id', 'customer_id', 'invoice_date', 'quantity', 'unit_price', 'total_price', 'is_credit', 'business_mode']
         
-        return {"message": f"V4 Turbo Engine: Processed {len(rfm_df)} customers. Workspace Unlocked."}
+        for i in range(0, len(df), tx_batch_size):
+            chunk = df.iloc[i : i + tx_batch_size][cols_to_save]
+            # Convert only this tiny chunk to dicts
+            db.bulk_insert_mappings(models.Transaction, chunk.to_dict('records'))
+            db.commit()
+            del chunk
+            if i % 50000 == 0:
+                gc.collect()
+
+        # FINAL CLEANUP
+        clear_dashboard_cache(user.id)
+        return {"message": f"Successfully Ingested {len(df)} records for {len(rfm_df)} customers. AI Engine Activated."}
 
         
     except Exception as e:
