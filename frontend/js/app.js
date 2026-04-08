@@ -106,15 +106,17 @@ window.initApp = async function() {
         
         // Render initial view
         window.switchTab(startTab);
+        // Reveal bottom nav — guarantee it always shows even if fonts.ready stalls on mobile
         const revealBottomNav = () => {
             const nav = document.getElementById('app-bottom-nav');
-            if (nav) nav.classList.add('nav-ready');
+            if (nav && !nav.classList.contains('nav-ready')) {
+                nav.classList.add('nav-ready');
+            }
         };
-        if (document.fonts && document.fonts.ready) {
-            document.fonts.ready.then(revealBottomNav);
-        } else {
-            setTimeout(revealBottomNav, 400);
-        }
+        // Race: fonts promise vs 800ms hard deadline (handles Android/iOS browser quirks)
+        const fontTimeout = new Promise(resolve => setTimeout(resolve, 800));
+        const fontLoad = (document.fonts && document.fonts.ready) ? document.fonts.ready : fontTimeout;
+        Promise.race([fontLoad, fontTimeout]).then(revealBottomNav).catch(revealBottomNav);
 
         // ── PWA Install Button ─────────────────────────────────────────────────
         window._onInstallPromptReady = () => {
