@@ -1,9 +1,8 @@
 // API Client configuration
 // In a native mobile app wrapper (Capacitor), use the full Render deployment URL. 
 // For standard web/PWA access, use the relative path.
-const API_BASE = (window.location.protocol.includes('file') || window.location.protocol.includes('capacitor'))
-    ? 'https://your-app-url.onrender.com/api' // TODO: Replace with actual Render deployment URL
-    : '/api';
+const API_BASE = 'https://smart-customer-ai-7.onrender.com/api';
+window.API_BASE = API_BASE;
 
 class ApiClient {
     static getAuthHeader() {

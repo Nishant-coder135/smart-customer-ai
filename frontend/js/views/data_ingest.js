@@ -186,7 +186,8 @@ class DataIngestView {
         
         try {
             const token = localStorage.getItem('auth_token');
-            const response = await fetch('/api/upload', {
+            const apiUrl = window.API_BASE ? `${window.API_BASE}/upload` : '/api/upload';
+            const response = await fetch(apiUrl, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}` },
                 body: formData
@@ -202,7 +203,16 @@ class DataIngestView {
                 btn.innerHTML = originalHtml;
             }
         } catch (e) {
-            statusDiv.innerHTML = `<div class="card" style="background: hsla(0, 84%, 60%, 0.1); color: var(--danger-color); padding: 1rem; font-size: 0.85rem;">Error: Failed to reach ML server.</div>`;
+            console.error("[CSV Ingest Error]", e);
+            let msg = e.message || "Failed to reach ML server.";
+            if (e instanceof SyntaxError || msg.includes('Unexpected')) {
+                msg = "Server returned an invalid format. The file might be too large for a mobile connection causing a timeout, or the cloud backend exhausted its RAM.";
+            }
+            statusDiv.innerHTML = `<div class="card" style="background: hsla(0, 84%, 60%, 0.1); color: var(--danger-color); padding: 1rem; font-size: 0.85rem; text-align: left; line-height: 1.5;">
+                <strong style="display:block; margin-bottom:0.25rem;">Upload Failed:</strong>
+                ${msg}
+                <br><br><small style="opacity: 0.8;">💡 <b>Tip for Mobile:</b> Try splitting the CSV into smaller chunks (e.g. 5MB chunks) if you are on a mobile network to prevent connection drops or server OOM errors.</small>
+            </div>`;
             btn.disabled = false;
             btn.innerHTML = originalHtml;
         }
@@ -248,7 +258,8 @@ class DataIngestView {
         
         try {
             const token = localStorage.getItem('auth_token');
-            const response = await fetch('/api/reset', { 
+            const apiUrl = window.API_BASE ? `${window.API_BASE}/reset` : '/api/reset';
+            const response = await fetch(apiUrl, { 
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -363,7 +374,8 @@ class DataIngestView {
 
         try {
             const token = localStorage.getItem('auth_token');
-            const response = await fetch('/api/manual_entry', {
+            const apiUrl = window.API_BASE ? `${window.API_BASE}/manual_entry` : '/api/manual_entry';
+            const response = await fetch(apiUrl, {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
@@ -414,7 +426,8 @@ class DataIngestView {
         
         try {
             const token = localStorage.getItem('auth_token');
-            const response = await fetch(`/api/rural/transactions?search=${encodeURIComponent(search)}`, {
+            const apiUrl = window.API_BASE ? `${window.API_BASE}/rural/transactions` : `/api/rural/transactions`;
+            const response = await fetch(`${apiUrl}?search=${encodeURIComponent(search)}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             
