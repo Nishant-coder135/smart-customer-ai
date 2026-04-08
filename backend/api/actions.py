@@ -172,6 +172,7 @@ def get_todays_actions(user: models.User = Depends(get_current_user)):
                     expected_retention=act["expected_retention"],
                     confidence_score=act["confidence_score"]
                 )
+                db.add(new_action)   # MUST register in session before commit
                 db.commit()
                 db.refresh(new_action)
                 existing = new_action
