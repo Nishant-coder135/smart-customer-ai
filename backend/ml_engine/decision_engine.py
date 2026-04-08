@@ -1,4 +1,3 @@
-import pandas as pd
 import math
 
 class DecisionEngine:
@@ -162,6 +161,7 @@ def get_quick_business_snapshot(customers: list) -> dict:
             "revenue": 0, "growth_opp": "None", "primary_segment": "N/A"
         }
         
+    import pandas as pd
     df = pd.DataFrame(customers)
     
     # Basic Aggregates

@@ -179,16 +179,16 @@ body {
     bottom: 0;
     left: 0;
     right: 0;
-    height: calc(5.4rem + var(--safe-bottom));
+    height: calc(5.4rem + env(safe-area-inset-bottom, 0px));
     background: var(--glass-bg);
-    -webkit-backdrop-filter: blur(28px);
-    backdrop-filter: blur(28px);
+    -webkit-backdrop-filter: blur(28px) saturate(180%);
+    backdrop-filter: blur(28px) saturate(180%);
     display: flex;
     justify-content: center;
     align-items: flex-start;
     border-top: 1px solid var(--border-color);
-    z-index: 2000;
-    padding-bottom: var(--safe-bottom);
+    z-index: 5000; /* Ensure it stays above everything */
+    padding-bottom: env(safe-area-inset-bottom, 0px);
     /* Start hidden; JS reveals it after Boxicons font loads to prevent
        the misaligned flash-of-unstyled-text bug on first login. */
     opacity: 0;
@@ -690,6 +690,12 @@ body {
 .chat-bubble-ai {
     -webkit-user-select: text;
     user-select: text;
+}
+
+/* Chat container constraint for mobile keyboard */
+.chat-messages-container {
+    max-height: 60vh;
+    overflow-y: auto;
 }
 
 /* ===== PWA Install Banner ===== */

@@ -147,12 +147,13 @@ def _build_system_prompt(user: models.User, db) -> str:
 
         return (
             f"Role: You are SmartCustomer AI, a professional yet friendly business partner for a RURAL Indian enterprise. "
-            f"Business: {customers_count} customers, {tx_count} txs, Total ₹{total_rev:,.0f}. "
-            f"Segments: {seg_summary}. "
-            f"Festivals: {fest_context}. "
+            f"Business Context: {customers_count} customers, {tx_count} transactions, Total Revenue ₹{total_rev:,.0f}. "
+            f"Customer Segments: {seg_summary}. "
+            f"Upcoming Festivals: {fest_context}. "
             f"Suggested Action: {top_action}. "
-            f"Guidelines: Detailed, polite, use **bold** and ₹. Goal: Deep interactive consulting. "
-            f"Navigation: If you recommend a specific feature, use [[TAB:ACTIONS]], [[TAB:DATA]], or [[TAB:DASH]] to link them."
+            f"Instructions: Provide deep, actionable, multi-paragraph consulting. Use **bold** for key metrics and ₹ for currency. "
+            f"Never give brief summaries; your goal is to be a thorough business advisor. "
+            f"Navigation: Use [[TAB:ACTIONS]] for tasks, [[TAB:DATA]] for records, or [[TAB:DASH]] for the dashboard."
         )
     else:
         # URBAN MODE: Optimized
@@ -170,12 +171,14 @@ def _build_system_prompt(user: models.User, db) -> str:
 
         return (
             f"Role: You are SmartCustomer AI, a high-end business consultant for an URBAN enterprise. "
-            f"Context: {customers_count} customers, revenue ₹{total_rev:,.0f}. "
-            f"Segments: {seg_summary}. "
-            f"Alert: {vips_count} VIPs at churn risk. "
-            f"Festive: {fest_context}. "
-            f"Guidelines: Professional, data-driven, thorough. Use **bold** for metrics. Use ₹. "
-            f"Navigation: If you recommend a specific feature, use [[TAB:ACTIONS]] or [[TAB:DASH]] to link them."
+            f"Data Context: {customers_count} premium customers, total revenue ₹{total_rev:,.0f}. "
+            f"Current Segments: {seg_summary}. "
+            f"High Priority Alert: {vips_count} high-value VIPs exhibit churn risk patterns. "
+            f"Festive Calendar: {fest_context}. "
+            f"Instructions: You must provide professional, data-driven, and extremely thorough guidance. "
+            f"Use **bold** for metrics and insights. Use ₹ for all currency. "
+            f"Aim for deep strategic analysis in every response. "
+            f"Navigation: Use [[TAB:ACTIONS]] for logic, [[TAB:DASH]] for high-level stats, or [[TAB:ANALYTICS]] for deep dives."
         )
 
 @router.get("/history", response_model=List[ChatMessage])
@@ -211,7 +214,7 @@ def advisor_chat(req: AdvisorRequest, user: models.User = Depends(get_current_us
                 model="gemini-2.0-flash",
                 google_api_key=GEMINI_API_KEY,
                 temperature=0.7,
-                max_output_tokens=1024
+                max_output_tokens=2048
             )
             return run_ai_chain(llm, user, db, last_user_message, session_factory)
         except Exception as e:
@@ -225,7 +228,7 @@ def advisor_chat(req: AdvisorRequest, user: models.User = Depends(get_current_us
                 model="llama-3.3-70b-versatile",
                 groq_api_key=GROQ_API_KEY,
                 temperature=0.6,
-                max_tokens=1024
+                max_tokens=2048
             )
             return run_ai_chain(llm, user, db, last_user_message, session_factory)
         except Exception as e:

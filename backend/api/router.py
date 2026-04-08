@@ -1,15 +1,13 @@
-import random
+import os
 import datetime
+import random
 import collections
-import pandas as pd
-import numpy as np
+
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from pydantic import BaseModel
-import os
-
 import models
 from database import get_db, UrbanSessionLocal, RuralSessionLocal
 from api.auth import get_current_user
@@ -55,7 +53,7 @@ async def upload_csv(file: UploadFile = File(...), user: models.User = Depends(g
     if user.business_type != "urban":
         raise HTTPException(status_code=403, detail="CSV upload only supported for Urban mode.")
     
-    import io
+    import pandas as pd
     db = UrbanSessionLocal()
     try:
         # V3 MEMORY-OPTIMIZED STREAMING PIPELINE
@@ -227,6 +225,8 @@ async def upload_csv(file: UploadFile = File(...), user: models.User = Depends(g
 @router.get("/dashboard_data")
 def get_dashboard_data(mode: Optional[str] = None, user: models.User = Depends(get_current_user)):
     # Normalize mode
+    import numpy as np
+    import pandas as pd
     active_mode = mode or user.business_type or "urban"
     
     # 1. Check Cache (Mode-Aware)

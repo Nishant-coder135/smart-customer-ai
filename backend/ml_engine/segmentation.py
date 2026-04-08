@@ -1,10 +1,7 @@
-import pandas as pd
-import numpy as np
-from sklearn.preprocessing import PowerTransformer
-from sklearn.cluster import KMeans
 import datetime
 
-def process_rfm_segments(df_input: pd.DataFrame):
+def process_rfm_segments(df_input):
+    import pandas as pd
     """
     V5 Optimized Engine: Streamlined memory usage to prevent OOM on Render.
     """
@@ -63,6 +60,7 @@ def process_rural_transactions(transactions):
     """
     Bridge for Rural mode: Converts list of Transaction models/dicts into RFM DataFrame.
     """
+    import pandas as pd
     if not transactions:
         return pd.DataFrame()
         
@@ -98,6 +96,8 @@ def _apply_rfm_labels(rfm):
     if rfm.empty:
         return rfm
 
+    import numpy as np
+    from sklearn.cluster import KMeans
     # 3. Fast Vectorized Metrics
     rfm['clv'] = rfm['monetary'] * 0.2
     rfm['purchase_trend'] = np.where(rfm['recency'] < 14, 'Up', 'Stable')

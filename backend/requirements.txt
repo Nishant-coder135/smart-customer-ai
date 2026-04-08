@@ -14,3 +14,4 @@ langchain-core
 elevenlabs
 charset-normalizer
 requests
+psycopg2-binary

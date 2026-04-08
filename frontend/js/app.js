@@ -106,17 +106,34 @@ window.initApp = async function() {
         
         // Render initial view
         window.switchTab(startTab);
-        // Reveal bottom nav — guarantee it always shows even if fonts.ready stalls on mobile
+        // Reveal bottom nav — guarantee it always shows even if fonts.ready stalls or DOM is slow
         const revealBottomNav = () => {
             const nav = document.getElementById('app-bottom-nav');
-            if (nav && !nav.classList.contains('nav-ready')) {
-                nav.classList.add('nav-ready');
+            if (nav) {
+                if (!nav.classList.contains('nav-ready')) {
+                    nav.classList.add('nav-ready');
+                    console.log("[Nav] Revealed bottom navigation.");
+                }
+                return true;
             }
+            return false;
         };
-        // Race: fonts promise vs 800ms hard deadline (handles Android/iOS browser quirks)
-        const fontTimeout = new Promise(resolve => setTimeout(resolve, 800));
-        const fontLoad = (document.fonts && document.fonts.ready) ? document.fonts.ready : fontTimeout;
-        Promise.race([fontLoad, fontTimeout]).then(revealBottomNav).catch(revealBottomNav);
+
+        // Persistent polling (every 100ms for up to 1.5s) to handle slow DOM injection on mobile
+        let navPollCount = 0;
+        const navPollInterval = setInterval(() => {
+            if (revealBottomNav() || navPollCount > 15) {
+                clearInterval(navPollInterval);
+                // Last ditch effort if polling failed
+                if (navPollCount > 15) revealBottomNav();
+            }
+            navPollCount++;
+        }, 100);
+
+        // Also tie to font load as a secondary trigger
+        if (document.fonts && document.fonts.ready) {
+            document.fonts.ready.then(revealBottomNav).catch(revealBottomNav);
+        }
 
         // ── PWA Install Button ─────────────────────────────────────────────────
         window._onInstallPromptReady = () => {

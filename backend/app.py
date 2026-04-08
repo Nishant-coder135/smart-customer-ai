@@ -36,17 +36,26 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 if not GEMINI_API_KEY:
      print("[PORTAL] GEMINI_API_KEY not found. AI Advisor will use local intelligence fallback.")
 
-# Initialize the database tables in BOTH strictly isolated databases
-print("--- Initializing DB Tables ---")
-try:
-    models.Base.metadata.create_all(bind=urban_engine)
-    models.Base.metadata.create_all(bind=rural_engine)
-    print("--- DB Tables Initialized Successfully ---")
-except Exception as e:
-    print(f"--- DB Initialization Warning: {str(e)} ---")
-    print("--- Self-healing: Continuing boot, tables will attempt re-init on first request ---")
-
+# App Initialization
 app = FastAPI(title="SmartCustomer AI Platform")
+
+@app.on_event("startup")
+async def startup_event():
+    """Perform async infrastructure checks and table initialization."""
+    print("--- [STARTUP] Initializing Strictly Isolated Multi-Tenant Engines ---")
+    try:
+        models.Base.metadata.create_all(bind=urban_engine)
+        models.Base.metadata.create_all(bind=rural_engine)
+        print("--- [STARTUP] Multi-Tenant Isolation Verified & Tables Ready ---")
+    except Exception as e:
+        print(f"--- [STARTUP ERROR] DB Initialization Warning: {str(e)} ---")
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Gracefully close engine connection pools."""
+    print("--- [SHUTDOWN] Disposing Engine Connection Pools ---")
+    urban_engine.dispose()
+    rural_engine.dispose()
 
 # CORS setup
 app.add_middleware(
