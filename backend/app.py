@@ -28,9 +28,9 @@ from api.visuals import router as visuals_router
 
 # Check for crucial environment variables
 if not os.environ.get("SECRET_KEY"):
-    print("[CRITICAL] SECRET_KEY not found in environment. JWT auth will fail.")
+    print("[INFO] SECRET_KEY not found in environment. Using locally generated fallback.")
 if not os.environ.get("GEMINI_API_KEY"):
-    print("[WARNING] GEMINI_API_KEY not found. AI Advisor will use deterministic fallbacks.")
+    print("[INFO] GEMINI_API_KEY not found. AI Advisor gracefully running in offline/deterministic mode.")
 
 # Initialize the database tables in BOTH strictly isolated databases
 print("--- Initializing DB Tables ---")
