@@ -36,7 +36,7 @@
     </script>
     
     <!-- PWA Meta Tags -->
-    <link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="/manifest.json">
     
     <!-- Apple PWA Meta Tags -->
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -115,12 +115,13 @@
     <!-- PWA Service Worker Registration + Install Prompt -->
     <script>
         // ── Service Worker Registration ──────────────────────────────────────────
-        // ── NUCLEAR CACHE PURGE: Unregister old problematic SW ────────────────────
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                for(let registration of registrations) {
-                    registration.unregister().then(() => console.log('[PWA] Stale SW purged.'));
-                }
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').then(registration => {
+                    console.log('[PWA] Service Worker registered with scope: ', registration.scope);
+                }).catch(err => {
+                    console.error('[PWA] Service Worker registration failed: ', err);
+                });
             });
         }
 
