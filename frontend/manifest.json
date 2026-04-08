@@ -64,14 +64,14 @@
   "display_override": ["standalone", "window-controls-overlay"],
   "screenshots": [
     {
-      "src": "assets/icon-512.png",
+      "src": "assets/icon-512-v2.png",
       "sizes": "512x512",
       "type": "image/png",
       "form_factor": "wide",
       "label": "SmartCustomer AI Workspace"
     },
     {
-      "src": "assets/icon-512.png",
+      "src": "assets/icon-512-v2.png",
       "sizes": "512x512",
       "type": "image/png",
       "form_factor": "narrow",
