@@ -18,6 +18,9 @@ class ApiClient {
                 let msg = "Network response was not ok";
                 if (response.status === 401) {
                     msg = "Invalid credentials or missing session. Please sign in again.";
+                    if (window.handleLogout && !window.location.pathname.includes('login')) {
+                        setTimeout(() => window.handleLogout(), 1500);
+                    }
                 } else if (response.status === 404) {
                     msg = "Resource not found. Please check your connection or server port.";
                 } else if (response.status === 500) {

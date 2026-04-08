@@ -197,6 +197,11 @@ class DataIngestView {
                 // SUCCESS SPLASH!
                 this.renderSuccessSplash("CSV Market Data Processed Successfully!");
             } else {
+                if (response.status === 401) {
+                    showToast("Session expired. Please sign in again.", "error");
+                    setTimeout(() => window.handleLogout(), 1500);
+                    return;
+                }
                 const result = await response.json();
                 statusDiv.innerHTML = `<div class="card" style="background: hsla(0, 84%, 60%, 0.1); color: var(--danger-color); padding: 1rem; font-size: 0.85rem;">Error: ${result.detail || 'Failed processing'}</div>`;
                 btn.disabled = false;
