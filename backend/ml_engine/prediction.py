@@ -1,9 +1,7 @@
-import pandas as pd
-import numpy as np
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.linear_model import LogisticRegression
 
-def predict_behavior(rfm_df: pd.DataFrame):
+def predict_behavior(rfm_df):
+    import pandas as pd
+    import numpy as np
     """
     Predict churn and next purchase likelihood.
     In a real app, this would use labeled historical data.

@@ -144,15 +144,20 @@ def _build_system_prompt(user: models.User, db) -> str:
 
         upcoming = get_upcoming_festivals(n=2)
         fest_context = ", ".join([f"{f['name']} ({f['date']})" for f in upcoming]) or "No immediate festivals."
+        snapshot = f"{customers_count} customers, {tx_count} transactions, Total Revenue ₹{total_rev:,.0f}. Segments: {seg_summary}. Festivals: {fest_context}. Action: {top_action}."
 
         return (
-            f"Role: You are SmartCustomer AI, a professional yet friendly business partner for a RURAL Indian enterprise. "
-            f"Business Context: {customers_count} customers, {tx_count} transactions, Total Revenue ₹{total_rev:,.0f}. "
-            f"Customer Segments: {seg_summary}. "
-            f"Upcoming Festivals: {fest_context}. "
-            f"Suggested Action: {top_action}. "
-            f"Instructions: Provide deep, actionable, multi-paragraph consulting. Use **bold** for key metrics and ₹ for currency. "
-            f"Never give brief summaries; your goal is to be a thorough business advisor. "
+            f"""
+            You are the 'SmartCustomer AI DEEP ADVISOR'. You provide elite business consulting.
+            
+            STRICT RESPONSE REQUIREMENTS:
+            1. LENGTH: You MUST provide at least 4 to 5 detailed paragraphs. Never give short answers.
+            2. STRUCTURE: Use Markdown. Include a 'Strategic Overview', 'Data-Driven Insights', and 'Action Roadmap'.
+            3. CONTEXT: User Business Type is {user.business_type.upper()}. Use the following snapshot of their data: {snapshot}
+            4. TONE: Professional, data-driven, and highly strategic.
+            
+            Goal: Help the user double their revenue using the metrics provided.
+            """
             f"Navigation: Use [[TAB:ACTIONS]] for tasks, [[TAB:DATA]] for records, or [[TAB:DASH]] for the dashboard."
         )
     else:
@@ -169,15 +174,20 @@ def _build_system_prompt(user: models.User, db) -> str:
         upcoming = get_upcoming_festivals(n=2)
         fest_context = ", ".join([f"{f['name']} ({f['date']})" for f in upcoming]) or "No immediate festivals."
 
+        snapshot = f"{customers_count} premium customers, total revenue ₹{total_rev:,.0f}. Segments: {seg_summary}. High-Risk VIPs: {vips_count}. Festivals: {fest_context}."
+
         return (
-            f"Role: You are SmartCustomer AI, a high-end business consultant for an URBAN enterprise. "
-            f"Data Context: {customers_count} premium customers, total revenue ₹{total_rev:,.0f}. "
-            f"Current Segments: {seg_summary}. "
-            f"High Priority Alert: {vips_count} high-value VIPs exhibit churn risk patterns. "
-            f"Festive Calendar: {fest_context}. "
-            f"Instructions: You must provide professional, data-driven, and extremely thorough guidance. "
-            f"Use **bold** for metrics and insights. Use ₹ for all currency. "
-            f"Aim for deep strategic analysis in every response. "
+            f"""
+            You are the 'SmartCustomer AI DEEP ADVISOR'. You provide elite business consulting.
+            
+            STRICT RESPONSE REQUIREMENTS:
+            1. LENGTH: You MUST provide at least 4 to 5 detailed paragraphs. Never give short answers.
+            2. STRUCTURE: Use Markdown. Include a 'Strategic Overview', 'Data-Driven Insights', and 'Action Roadmap'.
+            3. CONTEXT: User Business Type is {user.business_type.upper()}. Use the following snapshot of their data: {snapshot}
+            4. TONE: Professional, data-driven, and highly strategic.
+            
+            Goal: Help the user double their revenue using the metrics provided.
+            """
             f"Navigation: Use [[TAB:ACTIONS]] for logic, [[TAB:DASH]] for high-level stats, or [[TAB:ANALYTICS]] for deep dives."
         )
 

@@ -69,9 +69,9 @@ app.add_middleware(
 frontend_path = os.path.join(current_dir, "..", "frontend")
 print(f"--- Frontend Path: {frontend_path} ---")
 
-@app.api_route("/api/ping", methods=["GET", "HEAD"])
-def ping():
-    return {"status": "ok", "message": "Backend is alive"}
+@app.get("/api/ping")
+async def ping():
+    return {"status": "ok", "message": "SmartCustomer AI Backend Active"}
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):

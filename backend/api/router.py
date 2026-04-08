@@ -557,6 +557,9 @@ def get_analytics(user: models.User = Depends(get_current_user)):
             if not customers:
                 return {"distribution": {}, "revenue": {}, "scatter": []}
             
+            import numpy as np
+            import random
+            
             distribution = {}
             revenue = {}
             scatter = []
@@ -568,7 +571,6 @@ def get_analytics(user: models.User = Depends(get_current_user)):
                 
                 # Mock PCA for Scatter Plot using RFM logs (Standard cluster visualization)
                 # Adding some jitter for better visual separation
-                import random
                 scatter.append({
                     "x": float(np.log1p(c.frequency or 0)) + (random.random() * 0.1),
                     "y": float(np.log1p(c.monetary or 0)) + (random.random() * 0.1),
