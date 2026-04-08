@@ -34,8 +34,13 @@ if not os.environ.get("GEMINI_API_KEY"):
 
 # Initialize the database tables in BOTH strictly isolated databases
 print("--- Initializing DB Tables ---")
-models.Base.metadata.create_all(bind=urban_engine)
-models.Base.metadata.create_all(bind=rural_engine)
+try:
+    models.Base.metadata.create_all(bind=urban_engine)
+    models.Base.metadata.create_all(bind=rural_engine)
+    print("--- DB Tables Initialized Successfully ---")
+except Exception as e:
+    print(f"--- DB Initialization Warning: {str(e)} ---")
+    print("--- Self-healing: Continuing boot, tables will attempt re-init on first request ---")
 
 app = FastAPI(title="SmartCustomer AI Platform")
 

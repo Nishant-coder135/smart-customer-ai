@@ -13,3 +13,4 @@ langchain-google-genai
 langchain-groq
 langchain-core
 elevenlabs
+charset-normalizer

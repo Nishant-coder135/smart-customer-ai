@@ -100,9 +100,6 @@ async def upload_csv(file: UploadFile = File(...), user: models.User = Depends(g
 
         if df is None or df.empty:
             return {"message": "CSV is empty or could not be parsed"}
-        
-        if df.empty:
-            return {"message": "CSV is empty"}
             
         print(f"DEBUG: RAW CSV Columns: {df.columns.tolist()}")
 
@@ -149,7 +146,7 @@ async def upload_csv(file: UploadFile = File(...), user: models.User = Depends(g
         db.query(models.Transaction).filter(models.Transaction.user_id == user.id, models.Transaction.business_mode == "urban").delete()
         db.commit()
         
-        # --- PHARSE 3: BATCH INSERT CUSTOMERS ---
+        # --- PHASE 3: BATCH INSERT CUSTOMERS ---
         import gc
         gc.collect() # Deep clean before DB heavy lifting
         
