@@ -106,5 +106,47 @@
     {
       "origin": "https://smart-customer-ai-7.onrender.com"
     }
+  ],
+  "file_handlers": [
+    {
+      "action": "./",
+      "accept": {
+        "text/csv": [".csv"],
+        "application/json": [".json"]
+      }
+    }
+  ],
+  "protocol_handlers": [
+    {
+      "protocol": "web+smartcustomer",
+      "url": "./?action=%s"
+    }
+  ],
+  "widgets": [
+    {
+      "name": "SmartCustomer AI Snapshot",
+      "description": "Quick view of business performance",
+      "tag": "dashboard-widget",
+      "ms_ac_template": "assets/template.json",
+      "data": "assets/data.json",
+      "type": "application/json",
+      "screenshots": [
+        {
+          "src": "assets/icon-512-v2.png",
+          "sizes": "512x512",
+          "type": "image/png",
+          "label": "SmartCustomer AI Widget Preview"
+        }
+      ],
+      "icons": [
+        {
+          "src": "assets/icon-192-v2.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ],
+      "auth": false,
+      "update": 86400
+    }
   ]
 }
