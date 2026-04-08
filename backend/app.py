@@ -26,11 +26,15 @@ from api.voice import router as voice_router
 from api.authenticity import router as authenticity_router
 from api.visuals import router as visuals_router
 
-# Check for crucial environment variables
-if not os.environ.get("SECRET_KEY"):
-    print("[INFO] SECRET_KEY not found in environment. Using locally generated fallback.")
-if not os.environ.get("GEMINI_API_KEY"):
-    print("[INFO] GEMINI_API_KEY not found. AI Advisor gracefully running in offline/deterministic mode.")
+# Check for crucial environment variables (Cleaner logging for Render)
+SECRET_KEY = os.environ.get("SECRET_KEY")
+if not SECRET_KEY:
+    print("[PORTAL] SECRET_KEY not found. Using local fallback.")
+    os.environ["SECRET_KEY"] = "local-dev-fallback-9er8u3498u34"
+
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+if not GEMINI_API_KEY:
+     print("[PORTAL] GEMINI_API_KEY not found. AI Advisor will use local intelligence fallback.")
 
 # Initialize the database tables in BOTH strictly isolated databases
 print("--- Initializing DB Tables ---")
@@ -92,4 +96,6 @@ print("--- App Ready. Routes Registered ---")
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    # Use Render's PORT or default to 8000
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
