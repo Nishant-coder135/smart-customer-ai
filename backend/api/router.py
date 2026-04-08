@@ -65,6 +65,15 @@ async def upload_csv(file: UploadFile = File(...), user: models.User = Depends(g
         # Read the file content into memory once to safely try multiple encodings
         content = await file.read()
         
+        # Decompress gzip files transparently before processing
+        if file.filename and file.filename.endswith('.gz'):
+            import gzip
+            try:
+                content = gzip.decompress(content)
+                print(f"DEBUG: Successfully decompressed {file.filename}")
+            except Exception as e:
+                raise HTTPException(status_code=400, detail=f"Failed to decompress .gz file: {str(e)}")
+        
         # V2 Robust Decoding Logic
         df = None
         # Try common ones first for speed (including utf-8-sig for Excel BOMs FIRST)
