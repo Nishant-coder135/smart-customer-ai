@@ -62,48 +62,44 @@ async def upload_csv(file: UploadFile = File(...), user: models.User = Depends(g
     import io
     db = UrbanSessionLocal()
     try:
-        # Read the file content into memory once to safely try multiple encodings
-        content = await file.read()
+        # V3 MEMORY-OPTIMIZED STREAMING PIPELINE
+        # We sample the first 20KB to detect encoding without buffering the whole file
+        sample = await file.read(20480) 
+        await file.seek(0) # Reset pointer
         
-        # Decompress gzip files transparently before processing
-        if file.filename and file.filename.endswith('.gz'):
+        is_gz = file.filename and file.filename.endswith('.gz')
+        
+        # Detect encoding from sample
+        try:
+            from charset_normalizer import from_bytes
+            detected = from_bytes(sample).best()
+            encoding = (detected.encoding if detected else 'utf-8-sig') or 'utf-8-sig'
+            print(f"DEBUG: Sample detected encoding: {encoding} (GZ: {is_gz})")
+        except Exception:
+            encoding = 'utf-8-sig'
+
+        # Stream decompression + Pandas loading
+        if is_gz:
             import gzip
-            try:
-                content = gzip.decompress(content)
-                print(f"DEBUG: Successfully decompressed {file.filename}")
-            except Exception as e:
-                raise HTTPException(status_code=400, detail=f"Failed to decompress .gz file: {str(e)}")
-        
-        # V2 Robust Decoding Logic
-        df = None
-        # Try common ones first for speed (including utf-8-sig for Excel BOMs FIRST)
-        encodings_to_try = ['utf-8-sig', 'utf-8', 'latin-1', 'cp1252', 'iso-8859-1']
-        
-        for encoding in encodings_to_try:
-            try:
-                # Seek back to 0 if we already read from it (though BytesIO is fresh each loop here)
-                df = pd.read_csv(io.BytesIO(content), encoding=encoding)
-                print(f"DEBUG: Successfully decoded CSV with {encoding}")
-                break
-            except Exception:
-                continue
+            # We wrap the underlying file-like object directly
+            stream = gzip.GzipFile(fileobj=file.file)
+        else:
+            stream = file.file
 
-        # If all standard ones fail, use professional charset detection
-        if df is None:
-            try:
-                from charset_normalizer import from_bytes
-                detected = from_bytes(content).best()
-                if detected and detected.encoding:
-                    print(f"DEBUG: Detected encoding via charset-normalizer: {detected.encoding}")
-                    df = pd.read_csv(io.BytesIO(content), encoding=detected.encoding)
-            except Exception as e:
-                print(f"DEBUG: Charset detection failed: {e}")
-
-        if df is None:
-            raise HTTPException(
-                status_code=400, 
-                detail="CSV Ingestion Fail: Could not determine file encoding. Please ensure the file is saved as a standard CSV (UTF-8 or Excel CSV)."
+        try:
+            # Low Memory parsing
+            df = pd.read_csv(
+                stream, 
+                encoding=encoding, 
+                low_memory=True,
+                on_bad_lines='skip'
             )
+        except Exception as e:
+            print(f"DEBUG: Pandad stream read failed: {e}")
+            raise HTTPException(status_code=400, detail=f"CSV Parsing Failed: {str(e)}")
+
+        if df is None or df.empty:
+            return {"message": "CSV is empty or could not be parsed"}
         
         if df.empty:
             return {"message": "CSV is empty"}

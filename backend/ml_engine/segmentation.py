@@ -6,10 +6,10 @@ import datetime
 
 def process_rfm_segments(df_input: pd.DataFrame):
     """
-    V4 Optimized Engine: Vectorized processing for <15s latency on 50k+ rows.
+    V5 Optimized Engine: Streamlined memory usage to prevent OOM on Render.
     """
-    # 1. Cleaning (Work on a copy to avoid side-effects in router.py)
-    df = df_input.copy()
+    # Use direct reference to save RAM (Input df is already a short-lived temp object from router.py)
+    df = df_input
     
     # --- AGGRESSIVE NORMALIZATION (Matches router.py) ---
     import re
