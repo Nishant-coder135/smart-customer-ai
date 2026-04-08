@@ -3,7 +3,6 @@ from pydantic import BaseModel
 import os
 from api.auth import get_current_user
 import models
-from elevenlabs import ElevenLabs
 
 router = APIRouter()
 
@@ -40,8 +39,6 @@ def synthesize_voice(req: VoiceRequest, user: models.User = Depends(get_current_
     try:
         from elevenlabs.client import ElevenLabs
         client = ElevenLabs(api_key=ELEVENLABS_API_KEY)
-        
-        # ELEVENLABS V1.x: Fetch available voices to ensure we don't get 'voice_not_found'
         try:
             voices_response = client.voices.get_all()
             available_ids = [v.voice_id for v in voices_response.voices]

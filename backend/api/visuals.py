@@ -1,17 +1,13 @@
 from fastapi import APIRouter, HTTPException, Response
 from pydantic import BaseModel
-from google import genai
-from google.genai import types
 import os
 import base64
 
 router = APIRouter()
 
-# Setup Gemini Modern Client
+# Lazy-load google.genai — only at request time, not at server boot
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-client = None
-if GEMINI_API_KEY:
-    client = genai.Client(api_key=GEMINI_API_KEY)
+
 
 def get_simulation_svg(reason="Visual Strategy Generated"):
     """
@@ -80,25 +76,27 @@ class VisualRequest(BaseModel):
     prompt: str
     context: dict = {}
 
+
 @router.post("/generate")
-async def generate_visual(data: VisualRequest): 
+async def generate_visual(data: VisualRequest):
     prompt = data.prompt
-    
-    if not client:
-        # PROFESSIONAL SIMULATION MODE
+
+    if not GEMINI_API_KEY:
+        # PROFESSIONAL SIMULATION MODE — no key, no heavy imports
         print(f"[Visuals] Running in Simulation Mode for prompt: {prompt}")
         return Response(content=get_simulation_svg(), media_type="image/svg+xml", headers={"X-AI-Status": "simulation"})
 
     try:
-        # Use Imagen-3 via the modern Client
-        # 'imagen-3' is a reliable alias, or use 'imagen-3.0-generate-001'
-        # Use the verified available identifier
-        model_name = "imagen-4.0-generate-001" 
-        
+        # Lazy imports — only when a valid API key exists AND a request arrives
+        from google import genai
+        from google.genai import types
+
+        client = genai.Client(api_key=GEMINI_API_KEY)
+        model_name = "imagen-4.0-generate-001"
+
         print(f"[Visuals] Generating image for prompt: {prompt} using model: {model_name}")
-        
+
         try:
-            # IMPORTANT: It must be plural 'generate_images' AND 'GenerateImagesConfig' in google-genai 1.x
             response = client.models.generate_images(
                 model=model_name,
                 prompt=f"A professional business marketing visual for: {prompt}",
@@ -108,9 +106,6 @@ async def generate_visual(data: VisualRequest):
                 )
             )
 
-
-            
-            # The plural method returns a list of images
             if response.generated_images:
                 image_data = response.generated_images[0].image.image_bytes
                 return Response(content=image_data, media_type="image/png")
@@ -122,7 +117,6 @@ async def generate_visual(data: VisualRequest):
             print(f"Imagen error: {inner_e}. Falling back to simulation.")
             return Response(content=get_simulation_svg(reason), media_type="image/svg+xml", headers={"X-AI-Status": "simulation", "X-AI-Error": str(inner_e)})
 
-            
     except Exception as e:
         print(f"Global visuals error: {e}")
         return Response(content=get_simulation_svg("System Error"), media_type="image/svg+xml", headers={"X-AI-Status": "simulation"})
