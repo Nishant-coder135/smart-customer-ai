@@ -60,7 +60,7 @@ app.add_middleware(
 frontend_path = os.path.join(current_dir, "..", "frontend")
 print(f"--- Frontend Path: {frontend_path} ---")
 
-@app.get("/api/ping")
+@app.api_route("/api/ping", methods=["GET", "HEAD"])
 def ping():
     return {"status": "ok", "message": "Backend is alive"}
 
