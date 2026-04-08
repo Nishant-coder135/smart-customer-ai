@@ -1,7 +1,6 @@
 import random
 import datetime
 import collections
-print("--- RELOADING ROUTER.PY ---")
 import pandas as pd
 import numpy as np
 from typing import List, Optional
@@ -9,10 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from pydantic import BaseModel
-
 import os
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_core.prompts import ChatPromptTemplate
 
 import models
 from database import get_db, UrbanSessionLocal, RuralSessionLocal

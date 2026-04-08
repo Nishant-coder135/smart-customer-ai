@@ -10,8 +10,6 @@ from pydantic import BaseModel
 import urllib.parse
 import os
 import datetime
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_core.prompts import ChatPromptTemplate
 from sqlalchemy import func
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
@@ -34,10 +32,13 @@ class LogOutcomeRequest(BaseModel):
 
 def _generate_pitch_and_template(action_text: str, segment: str, business_type: str):
     """Uses LangChain to generate a professional explanation and a message template."""
+    GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
     if not GEMINI_API_KEY:
         return "Strategic business move.", f"Special offer on {action_text} for you!"
 
     try:
+        from langchain_google_genai import ChatGoogleGenerativeAI
+        from langchain_core.prompts import ChatPromptTemplate
         llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash", google_api_key=GEMINI_API_KEY, temperature=0.7)
         prompt = ChatPromptTemplate.from_template(
             "You are a professional business consultant for a {mode} Indian business. "

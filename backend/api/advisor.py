@@ -12,31 +12,26 @@ from ml_engine.seasonal_advisor import SeasonalAdvisor, get_upcoming_festivals
 from ml_engine.decision_engine import DecisionEngine, generate_daily_actions, get_quick_business_snapshot
 from ml_engine.segmentation import process_rural_transactions
 
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_groq import ChatGroq
-from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, BaseMessage
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.chat_history import BaseChatMessageHistory
-from langchain_core.runnables.history import RunnableWithMessageHistory
-
-# Check for API Keys
+# Check for API Keys - quietly, no WARNING spam
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 
-class DBChatMessageHistory(BaseChatMessageHistory):
-    """Custom LangChain history that persists to our SQLAlchemy ChatMessage model."""
+
+class DBChatMessageHistory:
+    """Custom LangChain-compatible history that persists to our SQLAlchemy ChatMessage model."""
     def __init__(self, user_id: int, session_factory):
         self.user_id = user_id
         self.session_factory = session_factory
 
     @property
-    def messages(self) -> List[BaseMessage]:
+    def messages(self) -> List:
         db = self.session_factory()
         try:
             db_msgs = db.query(models.ChatMessage).filter(
                 models.ChatMessage.user_id == self.user_id
             ).order_by(models.ChatMessage.created_at.desc()).limit(20).all()
-            
+
+            from langchain_core.messages import HumanMessage, AIMessage
             lc_msgs = []
             for m in reversed(db_msgs):
                 if m.role == "assistant":
@@ -44,13 +39,15 @@ class DBChatMessageHistory(BaseChatMessageHistory):
                 else:
                     lc_msgs.append(HumanMessage(content=m.content))
             return lc_msgs
+        except ImportError:
+            return []
         finally:
             db.close()
 
-    def add_message(self, message: BaseMessage) -> None:
+    def add_message(self, message) -> None:
         db = self.session_factory()
         try:
-            role = "assistant" if isinstance(message, AIMessage) else "user"
+            role = "assistant" if message.__class__.__name__ == "AIMessage" else "user"
             new_msg = models.ChatMessage(
                 user_id=self.user_id,
                 role=role,
@@ -69,11 +66,8 @@ class DBChatMessageHistory(BaseChatMessageHistory):
         finally:
             db.close()
 
-router = APIRouter()
 
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
-if not GEMINI_API_KEY:
-    print("WARNING: GEMINI_API_KEY not found in environment variables.")
+router = APIRouter()
 
 
 class ChatMessage(BaseModel):
@@ -110,32 +104,32 @@ def _build_system_prompt(user: models.User, db) -> str:
             models.Transaction.user_id == user.id,
             models.Transaction.business_mode == "rural"
         ).distinct().count()
-        
+
         tx_count = db.query(models.Transaction).filter(
             models.Transaction.user_id == user.id,
             models.Transaction.business_mode == "rural"
         ).count()
-        
+
         total_rev = db.query(func.sum(models.Transaction.total_price)).filter(
             models.Transaction.user_id == user.id,
             models.Transaction.business_mode == "rural"
         ).scalar() or 0
-        
+
         # Segment Synthesis (Small sample for prompt)
         txs_sample = db.query(models.Transaction).filter(
             models.Transaction.user_id == user.id,
             models.Transaction.business_mode == "rural"
         ).limit(100).all()
-        
+
         seg_summary = "No segments yet."
         top_action = "General engagement"
-        
+
         if txs_sample:
             rfm_df = process_rural_transactions(txs_sample)
             s_counts = rfm_df['segment_name'].value_counts()
             seg_list = [f"{name} ({count})" for name, count in s_counts.items()]
             seg_summary = "; ".join(seg_list)
-            
+
             cust_dicts = []
             for cid, r in rfm_df.head(10).iterrows(): # Only top 10 for action logic
                 cust_dicts.append({
@@ -150,7 +144,7 @@ def _build_system_prompt(user: models.User, db) -> str:
 
         upcoming = get_upcoming_festivals(n=2)
         fest_context = ", ".join([f"{f['name']} ({f['date']})" for f in upcoming]) or "No immediate festivals."
-        
+
         return (
             f"Role: You are SmartCustomer AI, a professional yet friendly business partner for a RURAL Indian enterprise. "
             f"Business: {customers_count} customers, {tx_count} txs, Total ₹{total_rev:,.0f}. "
@@ -164,16 +158,16 @@ def _build_system_prompt(user: models.User, db) -> str:
         # URBAN MODE: Optimized
         customers_count = db.query(func.count(models.Customer.id)).filter(models.Customer.user_id == user.id).scalar() or 0
         total_rev = db.query(func.sum(models.Customer.monetary)).filter(models.Customer.user_id == user.id).scalar() or 0
-        
+
         segments = db.query(models.Segment).filter(models.Segment.user_id == user.id).all()
         seg_summary = "; ".join([f"{s.segment_name} ({s.total_customers})" for s in segments]) or "No segments yet."
-        
+
         # High-Risk VIPS for prompt context
         vips_count = db.query(models.Customer).filter(models.Customer.user_id == user.id, models.Customer.segment_name == "VIP", models.Customer.churn_probability > 0.5).count()
-        
+
         upcoming = get_upcoming_festivals(n=2)
         fest_context = ", ".join([f"{f['name']} ({f['date']})" for f in upcoming]) or "No immediate festivals."
-        
+
         return (
             f"Role: You are SmartCustomer AI, a high-end business consultant for an URBAN enterprise. "
             f"Context: {customers_count} customers, revenue ₹{total_rev:,.0f}. "
@@ -209,9 +203,10 @@ def advisor_chat(req: AdvisorRequest, user: models.User = Depends(get_current_us
     if not last_user_message:
         return {"reply": "I'm listening! What's on your mind today?"}
 
-    # 1. Try Gemini 2.0 (High Reasoning)
+    # 1. Try Gemini 2.0 (High Reasoning) - lazy import only when needed
     if GEMINI_API_KEY:
         try:
+            from langchain_google_genai import ChatGoogleGenerativeAI
             llm = ChatGoogleGenerativeAI(
                 model="gemini-2.0-flash",
                 google_api_key=GEMINI_API_KEY,
@@ -222,9 +217,10 @@ def advisor_chat(req: AdvisorRequest, user: models.User = Depends(get_current_us
         except Exception as e:
             print(f"[Gemini Failure] {e}. Falling back to Groq...")
 
-    # 2. Try Groq (High Speed Fallback)
+    # 2. Try Groq (High Speed Fallback) - lazy import only when needed
     if GROQ_API_KEY:
         try:
+            from langchain_groq import ChatGroq
             llm = ChatGroq(
                 model="llama-3.3-70b-versatile",
                 groq_api_key=GROQ_API_KEY,
@@ -240,6 +236,9 @@ def advisor_chat(req: AdvisorRequest, user: models.User = Depends(get_current_us
 
 def run_ai_chain(llm, user, db, user_input, session_factory):
     """LangChain execution logic wrapped for reuse across providers."""
+    from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+    from langchain_core.runnables.history import RunnableWithMessageHistory
+
     system_prompt = get_cached_prompt(user.id)
     if not system_prompt:
         system_prompt = _build_system_prompt(user, db)
@@ -273,7 +272,7 @@ def run_internal_fallback(user, db):
             txs = db.query(models.Transaction).filter(models.Transaction.user_id == user.id, models.Transaction.business_mode == "rural").all()
             if not txs:
                 return {"reply": "Internal Strategist: Welcome! I don't see any rural transactions yet. Please go to the [[TAB:DATA]] tab to record your first sale."}
-            
+
             total_rev = sum(t.total_price for t in txs if t.total_price)
             cust_count = len(set(t.customer_id for t in txs))
             return {"reply": f"Partner, I'm currently running on internal data. **Rural Snapshot**: {cust_count} Customers served, total revenue ₹{total_rev:,.0f}. I recommend syncing your records in the [[TAB:DATA]] tab for deeper insights."}
@@ -281,7 +280,7 @@ def run_internal_fallback(user, db):
             # Urban uses Customer table (segmentation already run)
             customers = db.query(models.Customer).filter(models.Customer.user_id == user.id).all()
             cust_list = [{"id": c.id, "monetary": float(c.monetary or 0), "churn_probability": float(c.churn_probability or 0), "segment_name": str(c.segment_name or "General")} for c in customers]
-            
+
             snap = get_quick_business_snapshot(cust_list)
             return {"reply": f"Internal Advisor active. Your **Urban Base** of {snap['total_customers']} customers shows a **{snap['primary_opportunity']}** opportunity. Avg Churn Risk: {snap['avg_churn_risk']}. I recommend checking the [[TAB:ACTIONS]] for prioritized tasks."}
     except Exception as e:

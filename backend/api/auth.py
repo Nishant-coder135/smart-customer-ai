@@ -14,7 +14,7 @@ import models
 # Secret key for JWT
 SECRET_KEY = os.environ.get("SECRET_KEY", "smartcustomer_ai_default_secret_key_998877")
 if SECRET_KEY == "smartcustomer_ai_default_secret_key_998877":
-    print("[WARNING] SECRET_KEY not found in environment variables. Using fallback default. Ensure you set this in production.")
+    print("[INFO] SECRET_KEY not set. Using built-in fallback for development.")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7 # 7 days
 
