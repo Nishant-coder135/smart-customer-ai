@@ -186,3 +186,22 @@ self.addEventListener('notificationclick', event => {
     const url = event.notification.data?.url || '/';
     event.waitUntil(clients.openWindow(url));
 });
+
+// ── Periodic Background Sync ──────────────────────────────────────────────────
+self.addEventListener('periodicsync', event => {
+    if (event.tag === 'update-dashboard-data') {
+        console.log('[SW] Periodic background sync: fetching latest dashboard data');
+        event.waitUntil(fetchAndCacheDashboardData());
+    }
+});
+
+async function fetchAndCacheDashboardData() {
+    try {
+        const response = await fetch('/api/dashboard_data');
+        if (response.ok) {
+            console.log('[SW] Dashboard data synced in background');
+        }
+    } catch (e) {
+        console.warn('[SW] Periodic sync failed:', e);
+    }
+}

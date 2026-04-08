@@ -61,7 +61,7 @@
       "icons": [{ "src": "assets/icon-192-v2.png", "sizes": "192x192" }]
     }
   ],
-  "display_override": ["standalone", "window-controls-overlay"],
+  "display_override": ["standalone", "tabbed", "window-controls-overlay"],
   "screenshots": [
     {
       "src": "assets/icon-512-v2.png",
@@ -148,5 +148,8 @@
       "auth": false,
       "update": 86400
     }
-  ]
+  ],
+  "note_taking": {
+    "new_note_url": "./?action=new_note"
+  }
 }
