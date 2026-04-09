@@ -34,9 +34,6 @@ def clean_text_for_speech(text: str) -> str:
     return text
 
 # Environment-based configuration
-ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY", "")
-DEFAULT_VOICE_ID = "nPczCjzI2ndSTrZfghLp" # "Callum" - Professional/Narrative
-
 class VoiceRequest(BaseModel):
     text: str
 
@@ -46,7 +43,9 @@ def synthesize_voice(req: VoiceRequest, user: models.User = Depends(get_current_
     Converts text to speech using ElevenLabs. 
     Includes a 'Professional Simulation' mode if the API key is missing.
     """
-    if not ELEVENLABS_API_KEY:
+    api_key = os.getenv("ELEVENLABS_API_KEY", "")
+    
+    if not api_key:
         # PROFESSIONAL SIMULATION MODE
         # We return a 1-second silent MP3 buffer to allow the UI to trigger its fallback.
         print("[Voice] ELEVENLABS_API_KEY not found. Running in Intelligence Simulation Mode.")
@@ -65,16 +64,16 @@ def synthesize_voice(req: VoiceRequest, user: models.User = Depends(get_current_
 
     try:
         from elevenlabs.client import ElevenLabs
-        client = ElevenLabs(api_key=ELEVENLABS_API_KEY)
+        client = ElevenLabs(api_key=api_key)
         try:
             voices_response = client.voices.get_all()
             available_ids = [v.voice_id for v in voices_response.voices]
-            voice_id = DEFAULT_VOICE_ID if DEFAULT_VOICE_ID in available_ids else (available_ids[0] if available_ids else None)
+            voice_id = "nPczCjzI2ndSTrZfghLp" if "nPczCjzI2ndSTrZfghLp" in available_ids else (available_ids[0] if available_ids else None)
             if not voice_id:
                 raise Exception("No voices available in this ElevenLabs account.")
         except Exception as ve:
             print(f"[ElevenLabs Voice Check Error] {ve}")
-            voice_id = DEFAULT_VOICE_ID # fallback to attempt anyway
+            voice_id = "nPczCjzI2ndSTrZfghLp" # fallback to attempt anyway
 
         # Clean text before synthesis to avoid "asterisk asterisk"
         clean_text = clean_text_for_speech(req.text)

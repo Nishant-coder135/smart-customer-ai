@@ -150,6 +150,21 @@ class AdvisorView {
         }
     }
 
+    static _cleanTextForSpeech(text) {
+        if (!text) return "";
+        let clean = text
+            .replace(/\*\*+(.*?)\*\*+/g, '$1') // Remove Bold
+            .replace(/\*(.*?)\*/g, '$1')      // Remove Italic
+            .replace(/#+\s*(.*?)\n/g, '$1. ') // Headings
+            .replace(/#+\s*(.*)/g, '$1')      // End of line headings
+            .replace(/\[\[.*?\]\]/g, '')      // Navigation Tags
+            .replace(/_/g, ' ')               // Underscores
+            .replace(/`/g, '')                // Backticks
+            .replace(/\s+/g, ' ')             // Collapse whitespace
+            .trim();
+        return clean;
+    }
+
     static async playVoice(btn, text) {
         // TOGGLE: If already playing this button, stop and return
         if (this.activeVoiceBtn === btn) {
@@ -194,11 +209,13 @@ class AdvisorView {
 
             // FALLBACK: Browser Native Speech Synthesis
             if (result && result.isSimulation) {
-                showToast("Switching to offline voice engine...", "info");
+                showToast("Switching to local voice engine...", "info");
             }
 
             if ('speechSynthesis' in window) {
-                const utterance = new SpeechSynthesisUtterance(text);
+                // IMPORTANT: We clean the text for the local browser speech too!
+                const cleanText = this._cleanTextForSpeech(text);
+                const utterance = new SpeechSynthesisUtterance(cleanText);
                 utterance.rate = 1.0;
                 utterance.pitch = 1.0;
                 

@@ -12,8 +12,7 @@ from backend.ml_engine.decision_engine import DecisionEngine, generate_daily_act
 from backend.ml_engine.segmentation import process_rural_transactions
 
 # Check for API Keys - quietly, no WARNING spam
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
+# Moved to lazy loading inside functions
 
 
 class DBChatMessageHistory:
@@ -216,12 +215,13 @@ def advisor_chat(req: AdvisorRequest, user: models.User = Depends(get_current_us
         return {"reply": "I'm listening! What's on your mind today?"}
 
     # 1. Try Gemini 2.0 (High Reasoning) - lazy import only when needed
-    if GEMINI_API_KEY:
+    gemini_key = os.environ.get("GEMINI_API_KEY")
+    if gemini_key:
         try:
             from langchain_google_genai import ChatGoogleGenerativeAI
             llm = ChatGoogleGenerativeAI(
                 model="gemini-2.0-flash",
-                google_api_key=GEMINI_API_KEY,
+                google_api_key=gemini_key,
                 temperature=0.7,
                 max_output_tokens=4096
             )
@@ -230,12 +230,13 @@ def advisor_chat(req: AdvisorRequest, user: models.User = Depends(get_current_us
             print(f"[Gemini Failure] {e}. Falling back to Groq...")
 
     # 2. Try Groq (High Speed Fallback) - lazy import only when needed
-    if GROQ_API_KEY:
+    groq_key = os.environ.get("GROQ_API_KEY")
+    if groq_key:
         try:
             from langchain_groq import ChatGroq
             llm = ChatGroq(
                 model="llama-3.3-70b-versatile",
-                groq_api_key=GROQ_API_KEY,
+                groq_api_key=groq_key,
                 temperature=0.6,
                 max_tokens=2048
             )
@@ -251,10 +252,8 @@ def run_ai_chain(llm, user, db, user_input, session_factory):
     from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
     from langchain_core.runnables.history import RunnableWithMessageHistory
 
-    system_prompt = get_cached_prompt(user.id)
-    if not system_prompt:
-        system_prompt = _build_system_prompt(user, db)
-        set_cached_prompt(user.id, system_prompt)
+    # We bypass caching for now to ensure the new strict prompts are forced active
+    system_prompt = _build_system_prompt(user, db)
 
     prompt = ChatPromptTemplate.from_messages([
         ("system", system_prompt),
