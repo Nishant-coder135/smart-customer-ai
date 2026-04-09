@@ -14,6 +14,7 @@ try:
     print("--- Attempting Internal Register Call ---")
     payload = {
         "name": "FullAppTest",
+        "username": "8888888888", # Added to fix 422 error
         "phone": "8888888888",
         "password": "password123",
         "business_type": "urban"

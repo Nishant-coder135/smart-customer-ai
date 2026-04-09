@@ -14,4 +14,5 @@ langchain-core
 elevenlabs
 charset-normalizer
 requests
-psycopg2-binary
+matplotlib
+fpdf2

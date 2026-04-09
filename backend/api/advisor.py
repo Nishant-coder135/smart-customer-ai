@@ -1,16 +1,15 @@
-from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
-from sqlalchemy import func
-from typing import List
-from pydantic import BaseModel
-from database import UrbanSessionLocal, RuralSessionLocal
-from api.auth import get_current_user
-import models
 import os
 import datetime
-from ml_engine.seasonal_advisor import SeasonalAdvisor, get_upcoming_festivals
-from ml_engine.decision_engine import DecisionEngine, generate_daily_actions, get_quick_business_snapshot
-from ml_engine.segmentation import process_rural_transactions
+from typing import List
+from fastapi import APIRouter, Depends
+from sqlalchemy import func
+from pydantic import BaseModel
+from backend.database import UrbanSessionLocal, RuralSessionLocal
+from backend.api.auth import get_current_user
+from backend import models
+from backend.ml_engine.seasonal_advisor import SeasonalAdvisor, get_upcoming_festivals
+from backend.ml_engine.decision_engine import DecisionEngine, generate_daily_actions, get_quick_business_snapshot
+from backend.ml_engine.segmentation import process_rural_transactions
 
 # Check for API Keys - quietly, no WARNING spam
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
@@ -148,15 +147,15 @@ def _build_system_prompt(user: models.User, db) -> str:
 
         return (
             f"""
-            You are the 'SmartCustomer AI DEEP ADVISOR'. You provide elite business consulting.
+            You are the 'SmartCustomer AI DEEP ADVISOR'. You provide elite, executive-level business consulting.
             
             STRICT RESPONSE REQUIREMENTS:
-            1. LENGTH: You MUST provide at least 4 to 5 detailed paragraphs. Never give short answers.
-            2. STRUCTURE: Use Markdown. Include a 'Strategic Overview', 'Data-Driven Insights', and 'Action Roadmap'.
-            3. CONTEXT: User Business Type is {user.business_type.upper()}. Use the following snapshot of their data: {snapshot}
-            4. TONE: Professional, data-driven, and highly strategic.
+            1. LENGTH: You MUST provide at least 4 to 5 detailed, professional paragraphs. Never give short or superficial answers.
+            2. STRUCTURE: Use Markdown. Include explicitly: 'Strategic Market Analysis', 'Data-Driven Insights', and 'Tiered Action Roadmap'.
+            3. CONTEXT: User Business Type is {user.business_type.upper()}. Leverage this snapshot: {snapshot}
+            4. TONE: High-confidence, analytical, and encouraging. Reference specific local or urban business tactics.
             
-            Goal: Help the user double their revenue using the metrics provided.
+            Goal: Act as a virtual COO to help the user grow their margin and dominance using the provided metrics.
             """
             f"Navigation: Use [[TAB:ACTIONS]] for tasks, [[TAB:DATA]] for records, or [[TAB:DASH]] for the dashboard."
         )
@@ -178,15 +177,15 @@ def _build_system_prompt(user: models.User, db) -> str:
 
         return (
             f"""
-            You are the 'SmartCustomer AI DEEP ADVISOR'. You provide elite business consulting.
+            You are the 'SmartCustomer AI DEEP ADVISOR'. You provide elite, executive-level business consulting.
             
             STRICT RESPONSE REQUIREMENTS:
-            1. LENGTH: You MUST provide at least 4 to 5 detailed paragraphs. Never give short answers.
-            2. STRUCTURE: Use Markdown. Include a 'Strategic Overview', 'Data-Driven Insights', and 'Action Roadmap'.
-            3. CONTEXT: User Business Type is {user.business_type.upper()}. Use the following snapshot of their data: {snapshot}
-            4. TONE: Professional, data-driven, and highly strategic.
+            1. LENGTH: You MUST provide at least 4 to 5 detailed, professional paragraphs. Never give short or superficial answers.
+            2. STRUCTURE: Use Markdown. Include explicitly: 'Strategic Market Analysis', 'Data-Driven Insights', and 'Tiered Action Roadmap'.
+            3. CONTEXT: User Business Type is {user.business_type.upper()}. Leverage this snapshot: {snapshot}
+            4. TONE: High-confidence, analytical, and encouraging. Reference urban growth tactics like retention funnels.
             
-            Goal: Help the user double their revenue using the metrics provided.
+            Goal: Act as a virtual COO to help the user grow their margin and dominance using the provided metrics.
             """
             f"Navigation: Use [[TAB:ACTIONS]] for logic, [[TAB:DASH]] for high-level stats, or [[TAB:ANALYTICS]] for deep dives."
         )
@@ -224,7 +223,7 @@ def advisor_chat(req: AdvisorRequest, user: models.User = Depends(get_current_us
                 model="gemini-2.0-flash",
                 google_api_key=GEMINI_API_KEY,
                 temperature=0.7,
-                max_output_tokens=2048
+                max_output_tokens=4096
             )
             return run_ai_chain(llm, user, db, last_user_message, session_factory)
         except Exception as e:

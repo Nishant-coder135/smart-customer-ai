@@ -8,8 +8,8 @@ from typing import Optional
 from pydantic import BaseModel
 import os, traceback
 
-from database import get_db, UrbanSessionLocal, RuralSessionLocal
-import models
+from backend.database import get_db, UrbanSessionLocal, RuralSessionLocal
+from backend import models
 
 # Secret key for JWT
 SECRET_KEY = os.environ.get("SECRET_KEY", "smartcustomer_ai_default_secret_key_998877")

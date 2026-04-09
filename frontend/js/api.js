@@ -1,7 +1,7 @@
 // API Client configuration
 // In a native mobile app wrapper (Capacitor), use the full Render deployment URL. 
 // For standard web/PWA access, use the relative path.
-const API_BASE = 'https://smart-customer-ai-7.onrender.com/api';
+const API_BASE = '/api';
 window.API_BASE = API_BASE;
 
 class ApiClient {
@@ -248,6 +248,35 @@ class ApiClient {
             },
             body: JSON.stringify({ messages })
         });
+    }
+
+    static async downloadReport(type) {
+        try {
+            const url = `${API_BASE}/reports/${type}`;
+            const response = await fetch(url, {
+                headers: this.getAuthHeader()
+            });
+
+            if (!response.ok) throw new Error(`Report generation failed: ${response.status}`);
+            
+            const blob = await response.blob();
+            const downloadUrl = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+            
+            const filename = `SmartCustomer_${type.charAt(0).toUpperCase() + type.slice(1)}_Report_${new Date().toISOString().split('T')[0]}.pdf`;
+            link.setAttribute('download', filename);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            
+            // Cleanup
+            setTimeout(() => window.URL.revokeObjectURL(downloadUrl), 100);
+            return true;
+        } catch (error) {
+            console.error("Report download error", error);
+            throw error;
+        }
     }
 
     static async getChatHistory() {

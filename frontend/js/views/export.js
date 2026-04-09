@@ -63,26 +63,39 @@ if (!window.ExportView) {
         `;
     }
 
-    static generate(type) {
+    static async generate(type) {
         const btn = event.target;
         const originalText = btn.innerHTML;
         btn.innerHTML = `<i class='bx bx-loader-alt bx-spin'></i> Preparing ${type}...`;
         btn.disabled = true;
 
-        setTimeout(() => {
-            btn.innerHTML = `<i class='bx bx-check'></i> Downloaded`;
-            btn.style.background = 'var(--success-color)';
-            btn.style.color = 'white';
-            
-            showToast(`Generating ${type}: Please wait for the browser download prompt.`, "success");
-
+        try {
+            if (type === 'PDF Roadmap' || type === 'Strategy Roadmap') {
+                showToast(`Generating high-fidelity Strategy PDF...`, "info");
+                await ApiClient.downloadReport('strategy');
+                
+                btn.innerHTML = `<i class='bx bx-check'></i> Downloaded`;
+                btn.style.background = 'var(--success-color)';
+                btn.style.color = 'white';
+                showToast(`Intelligence Report downloaded successfully!`, "success");
+            } else {
+                // Mock for other types for now
+                await new Promise(r => setTimeout(r, 1500));
+                showToast(`${type} export is currently in maintenance. PDF is recommended.`, "warning");
+                btn.innerHTML = originalText;
+            }
+        } catch (error) {
+            console.error(error);
+            showToast(`Failed to generate ${type}: ${error.message}`, "error");
+            btn.innerHTML = `<i class='bx bx-error'></i> Failed`;
+        } finally {
             setTimeout(() => {
                 btn.innerHTML = originalText;
                 btn.style.background = '';
                 btn.style.color = '';
                 btn.disabled = false;
             }, 3000);
-        }, 2000);
+        }
     }
 }
 window.ExportView = ExportView;

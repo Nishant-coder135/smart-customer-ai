@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
-from database import get_db, UrbanSessionLocal, RuralSessionLocal
-import models
-from ml_engine.decision_engine import generate_daily_actions
-from ml_engine.segmentation import process_rural_transactions
-from api.auth import get_current_user
+from backend.database import get_db, UrbanSessionLocal, RuralSessionLocal
+from backend import models
+from backend.ml_engine.decision_engine import generate_daily_actions
+from backend.ml_engine.segmentation import process_rural_transactions
+from backend.api.auth import get_current_user
 from pydantic import BaseModel
 import urllib.parse
 import os

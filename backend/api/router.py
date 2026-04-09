@@ -8,11 +8,14 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from pydantic import BaseModel
-import models
-from database import get_db, UrbanSessionLocal, RuralSessionLocal
-from api.auth import get_current_user
-from ml_engine.segmentation import process_rfm_segments
-from ml_engine.seasonal_advisor import SeasonalAdvisor
+from backend import models
+from backend.database import get_db, UrbanSessionLocal, RuralSessionLocal
+from backend.api.auth import get_current_user
+from backend.ml_engine.segmentation import process_rfm_segments
+from backend.ml_engine.seasonal_advisor import SeasonalAdvisor
+
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_core.prompts import ChatPromptTemplate
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
