@@ -36,11 +36,10 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 if not GEMINI_API_KEY:
      print("[PORTAL] GEMINI_API_KEY not found. AI Advisor will use local intelligence fallback.")
 
-# App Initialization
-app = FastAPI(title="SmartCustomer AI Platform")
+from contextlib import asynccontextmanager
 
-@app.on_event("startup")
-async def startup_event():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     """Perform async infrastructure checks and table initialization."""
     print("--- [STARTUP] Initializing Strictly Isolated Multi-Tenant Engines ---")
     try:
@@ -49,13 +48,14 @@ async def startup_event():
         print("--- [STARTUP] Multi-Tenant Isolation Verified & Tables Ready ---")
     except Exception as e:
         print(f"--- [STARTUP ERROR] DB Initialization Warning: {str(e)} ---")
-
-@app.on_event("shutdown")
-async def shutdown_event():
+    yield
     """Gracefully close engine connection pools."""
     print("--- [SHUTDOWN] Disposing Engine Connection Pools ---")
     urban_engine.dispose()
     rural_engine.dispose()
+
+# App Initialization
+app = FastAPI(title="SmartCustomer AI Platform", lifespan=lifespan)
 
 # CORS setup
 app.add_middleware(

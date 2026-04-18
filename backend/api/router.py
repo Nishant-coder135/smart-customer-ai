@@ -82,25 +82,33 @@ async def upload_csv(file: UploadFile = File(...), user: models.User = Depends(g
             encoding = 'latin-1'
 
         # Decompression handle
-        if is_gz:
-            import gzip
-            stream = gzip.GzipFile(fileobj=file.file)
-        else:
-            stream = file.file
+        def get_stream():
+            if is_gz:
+                import gzip
+                return gzip.GzipFile(fileobj=file.file)
+            return file.file
 
         try:
             # Primary read
             df = pd.read_csv(
-                stream, 
+                get_stream(), 
                 encoding=encoding, 
                 on_bad_lines='skip',
-                engine='python'
+                lineterminator='\n',
+                engine='c',
+                low_memory=False
             )
         except Exception as read_err:
             print(f"DEBUG: Primary read failed: {read_err}. Attempting fallback...")
             await file.seek(0)
-            content = await file.read()
-            df = pd.read_csv(io.BytesIO(content), encoding='latin-1', on_bad_lines='skip', engine='python')
+            df = pd.read_csv(
+                get_stream(), 
+                encoding='latin-1', 
+                on_bad_lines='skip', 
+                lineterminator='\n', 
+                engine='c', 
+                low_memory=False
+            )
 
         if df is None or df.empty:
             return {"message": "CSV is empty or could not be parsed"}
