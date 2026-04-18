@@ -93,7 +93,6 @@ async def upload_csv(file: UploadFile = File(...), user: models.User = Depends(g
             df = pd.read_csv(
                 stream, 
                 encoding=encoding, 
-                low_memory=False, 
                 on_bad_lines='skip',
                 engine='python'
             )
@@ -101,7 +100,7 @@ async def upload_csv(file: UploadFile = File(...), user: models.User = Depends(g
             print(f"DEBUG: Primary read failed: {read_err}. Attempting fallback...")
             await file.seek(0)
             content = await file.read()
-            df = pd.read_csv(io.BytesIO(content), encoding='latin-1', on_bad_lines='skip')
+            df = pd.read_csv(io.BytesIO(content), encoding='latin-1', on_bad_lines='skip', engine='python')
 
         if df is None or df.empty:
             return {"message": "CSV is empty or could not be parsed"}
