@@ -160,7 +160,10 @@ class AdvisorView {
             .replace(/\[\[.*?\]\]/g, '')      // Navigation Tags
             .replace(/_/g, ' ')               // Underscores
             .replace(/`/g, '')                // Backticks
-            .replace(/\s+/g, ' ')             // Collapse whitespace
+            .replace(/<think>[\s\S]*?<\/think>/gi, '') // Remove thinking tags
+            .replace(/<think>[\s\S]*/gi, '')          // Handle unclosed tags
+            .replace(/[\s\S]*?<\/think>/gi, '')      // Handle unopend tags
+            .replace(/\s+/g, ' ')                    // Collapse whitespace
             .trim();
         return clean;
     }
@@ -258,9 +261,12 @@ class AdvisorView {
         }
     }
 
-
     static _formatMessage(text) {
+        if (!text) return "";
         let html = text
+            .replace(/<think>[\s\S]*?<\/think>/gi, '')
+            .replace(/<think>[\s\S]*/gi, '')
+            .replace(/[\s\S]*?<\/think>/gi, '')
             .replace(/\n\n/g, '</p><p style="margin-top:0.75rem">')
             .replace(/\n/g, '<br>')
             .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')

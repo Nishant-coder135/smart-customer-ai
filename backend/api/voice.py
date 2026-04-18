@@ -8,27 +8,36 @@ router = APIRouter()
 
 def clean_text_for_speech(text: str) -> str:
     """
-    Strips Markdown symbols and specialized tags from text to ensure 
-    a clean, professional audio synthesis experience.
+    Strips Markdown symbols, specialized tags, and the JSON data block from text 
+    to ensure a clean, professional audio synthesis experience.
     """
     if not text: return ""
     
-    # 1. Remove Markdown Bold/Italic (e.g. **text** or *text*)
+    # 1. Remove JSON_DATA block and anything after it
+    text = re.split(r'JSON_DATA:', text, flags=re.I)[0]
+    
+    # 2. Remove Markdown Bold/Italic (e.g. **text** or *text*)
     text = re.sub(r'\*\*+(.*?)\*\*+', r'\1', text)
     text = re.sub(r'\*(.*?)\*', r'\1', text)
     
-    # 2. Remove Headings (e.g. ### Title)
+    # 3. Remove Headings (e.g. ### Title)
     text = re.sub(r'#+\s*(.*?)\n', r'\1. ', text)
     text = re.sub(r'#+\s*(.*)', r'\1', text)
     
-    # 3. Remove Navigation Tags (e.g. [[TAB:ACTIONS]])
+    # 4. Remove Thinking Artifacts (leaked <think> tags)
+    text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL)
+    text = re.sub(r'<think>.*', '', text, flags=re.DOTALL)
+    text = re.sub(r'.*?</think>', '', text, flags=re.DOTALL)
+    
+    # 5. Remove Navigation Tags (e.g. [[TAB:ACTIONS]])
     text = re.sub(r'\[\[.*?\]\]', '', text)
     
-    # 4. Remove other Markdown junk
+    # 6. Normalize currency and symbols for smoother reading
+    text = text.replace('₹', ' Rupees ')
     text = text.replace('_', ' ')
     text = text.replace('`', '')
     
-    # 5. Collapse whitespace
+    # 7. Collapse whitespace
     text = re.sub(r'\s+', ' ', text).strip()
     
     return text

@@ -10,6 +10,7 @@ from backend import models
 from backend.ml_engine.seasonal_advisor import SeasonalAdvisor, get_upcoming_festivals
 from backend.ml_engine.decision_engine import DecisionEngine, generate_daily_actions, get_quick_business_snapshot
 from backend.ml_engine.segmentation import process_rural_transactions
+from backend.ml_engine.agent_orchestrator import get_agent_orchestrator
 
 # Check for API Keys - quietly, no WARNING spam
 # Moved to lazy loading inside functions
@@ -94,10 +95,9 @@ def set_cached_prompt(user_id: int, prompt: str):
     }
 
 
-def _build_system_prompt(user: models.User, db) -> str:
-    """Build a premium, data-aware system prompt using optimized DB queries."""
+def _get_business_snapshot(user: models.User, db) -> str:
+    """Generates a detailed business snapshot string for the multi-agent advisor."""
     if user.business_type == "rural":
-        # Fast counts and sums
         customers_count = db.query(models.Transaction.customer_id).filter(
             models.Transaction.user_id == user.id,
             models.Transaction.business_mode == "rural"
@@ -113,80 +113,111 @@ def _build_system_prompt(user: models.User, db) -> str:
             models.Transaction.business_mode == "rural"
         ).scalar() or 0
 
-        # Segment Synthesis (Small sample for prompt)
+        credit_total = db.query(func.sum(models.Transaction.total_price)).filter(
+            models.Transaction.user_id == user.id,
+            models.Transaction.business_mode == "rural",
+            models.Transaction.is_credit == 1
+        ).scalar() or 0
+
+        # Segment Summary
         txs_sample = db.query(models.Transaction).filter(
             models.Transaction.user_id == user.id,
             models.Transaction.business_mode == "rural"
         ).limit(100).all()
 
         seg_summary = "No segments yet."
-        top_action = "General engagement"
-
         if txs_sample:
             rfm_df = process_rural_transactions(txs_sample)
             s_counts = rfm_df['segment_name'].value_counts()
             seg_list = [f"{name} ({count})" for name, count in s_counts.items()]
             seg_summary = "; ".join(seg_list)
 
-            cust_dicts = []
-            for cid, r in rfm_df.head(10).iterrows(): # Only top 10 for action logic
-                cust_dicts.append({
-                    "customer_id": str(cid), "recency": float(r['recency']),
-                    "monetary": float(r['monetary']), "frequency": float(r['frequency']),
-                    "churn_probability": float(r['churn_probability']), "clv": float(r['clv']),
-                    "segment_name": str(r['segment_name'])
-                })
-            actions = generate_daily_actions(cust_dicts)
-            if actions:
-                top_action = f"{actions[0]['action_text']} for {actions[0]['target_segment']}"
-
         upcoming = get_upcoming_festivals(n=2)
         fest_context = ", ".join([f"{f['name']} ({f['date']})" for f in upcoming]) or "No immediate festivals."
-        snapshot = f"{customers_count} customers, {tx_count} transactions, Total Revenue ₹{total_rev:,.0f}. Segments: {seg_summary}. Festivals: {fest_context}. Action: {top_action}."
-
-        return (
-            f"""
-            You are the 'SmartCustomer AI DEEP ADVISOR'. You provide elite, executive-level business consulting.
-            
-            STRICT RESPONSE REQUIREMENTS:
-            1. LENGTH: You MUST provide at least 4 to 5 detailed, professional paragraphs. Never give short or superficial answers.
-            2. STRUCTURE: Use Markdown. Include explicitly: 'Strategic Market Analysis', 'Data-Driven Insights', and 'Tiered Action Roadmap'.
-            3. CONTEXT: User Business Type is {user.business_type.upper()}. Leverage this snapshot: {snapshot}
-            4. TONE: High-confidence, analytical, and encouraging. Reference specific local or urban business tactics.
-            
-            Goal: Act as a virtual COO to help the user grow their margin and dominance using the provided metrics.
-            """
-            f"Navigation: Use [[TAB:ACTIONS]] for tasks, [[TAB:DATA]] for records, or [[TAB:DASH]] for the dashboard."
-        )
+        
+        avg_tx = total_rev / tx_count if tx_count > 0 else 0
+        credit_ratio = (credit_total / total_rev * 100) if total_rev > 0 else 0
+        
+        return f"RURAL MODE: {customers_count} customers, {tx_count} transactions, Total Revenue ₹{total_rev:,.0f}. Avg Ticket: ₹{avg_tx:,.0f}, Credit Ratio: {credit_ratio:.1f}%. Segments: {seg_summary}. Festivals: {fest_context}."
     else:
-        # URBAN MODE: Optimized
         customers_count = db.query(func.count(models.Customer.id)).filter(models.Customer.user_id == user.id).scalar() or 0
         total_rev = db.query(func.sum(models.Customer.monetary)).filter(models.Customer.user_id == user.id).scalar() or 0
-
         segments = db.query(models.Segment).filter(models.Segment.user_id == user.id).all()
         seg_summary = "; ".join([f"{s.segment_name} ({s.total_customers})" for s in segments]) or "No segments yet."
 
-        # High-Risk VIPS for prompt context
-        vips_count = db.query(models.Customer).filter(models.Customer.user_id == user.id, models.Customer.segment_name == "VIP", models.Customer.churn_probability > 0.5).count()
-
         upcoming = get_upcoming_festivals(n=2)
         fest_context = ", ".join([f"{f['name']} ({f['date']})" for f in upcoming]) or "No immediate festivals."
 
-        snapshot = f"{customers_count} premium customers, total revenue ₹{total_rev:,.0f}. Segments: {seg_summary}. High-Risk VIPs: {vips_count}. Festivals: {fest_context}."
+        avg_rev = total_rev / customers_count if customers_count > 0 else 0
+        return f"URBAN MODE: {customers_count} customers, total revenue ₹{total_rev:,.0f}, ARPU: ₹{avg_rev:,.0f}. Segments: {seg_summary}. Festivals: {fest_context}."
 
+
+def extract_and_save_actions(text: str, user_id: int, db):
+    """Parses JSON actions from the advisor and persists them to the DB."""
+    from backend.ml_engine.agent_orchestrator import AgentOrchestrator
+    
+    actions_data = AgentOrchestrator.extract_actions_json(text)
+    if not actions_data:
+        return 0
+    
+    count = 0
+    for item in actions_data:
+        try:
+            new_action = models.Action(
+                user_id=user_id,
+                title=item.get("title", "Strategic Action"),
+                action_text=item.get("action_text", ""),
+                target_segment=item.get("target_segment", "General"),
+                priority=item.get("priority", "medium"),
+                expected_revenue=item.get("expected_revenue", 0.0),
+                expected_retention=item.get("expected_retention", 0.0),
+                confidence_score=item.get("confidence_score", 0.0),
+                status="pending"
+            )
+            db.add(new_action)
+            count += 1
+        except Exception as e:
+            print(f"DEBUG: Failed to save individual action: {e}")
+            
+    if count > 0:
+        db.commit()
+    return count
+
+
+def _build_system_prompt(user: models.User, db) -> str:
+    """Build a premium, data-aware system prompt using optimized DB queries."""
+    snapshot = _get_business_snapshot(user, db)
+    if user.business_type == "rural":
         return (
             f"""
-            You are the 'SmartCustomer AI DEEP ADVISOR'. You provide elite, executive-level business consulting.
+            You are the 'SmartCustomer AI DEEP ADVISOR', acting as a virtual COO. You provide elite, executive-level business consulting.
             
             STRICT RESPONSE REQUIREMENTS:
-            1. LENGTH: You MUST provide at least 4 to 5 detailed, professional paragraphs. Never give short or superficial answers.
-            2. STRUCTURE: Use Markdown. Include explicitly: 'Strategic Market Analysis', 'Data-Driven Insights', and 'Tiered Action Roadmap'.
-            3. CONTEXT: User Business Type is {user.business_type.upper()}. Leverage this snapshot: {snapshot}
-            4. TONE: High-confidence, analytical, and encouraging. Reference urban growth tactics like retention funnels.
+            1. CONVERSATIONAL & DIRECT: Act as a real, highly-intelligent chatbot. Directly address and answer the user's specific question in detail.
+            2. LENGTH: Provide beautifully explained, detailed answers. If the topic is complex, use 3 to 5 professional paragraphs. Never give short, generic, or superficial answers.
+            3. STRUCTURE: Use Markdown formatting (bolding, lists) to make it highly readable. You do not need to follow a rigid section structure unless it fits the user's question perfectly.
+            4. CONTEXT: User Business Type is {user.business_type.upper()}. Leverage this snapshot: {snapshot}
+            5. TONE: High-confidence, analytical, and encouraging. Reference specific local or rural business tactics to ground your advice.
             
-            Goal: Act as a virtual COO to help the user grow their margin and dominance using the provided metrics.
+            Goal: Act as a dynamic, intelligent virtual COO to completely answer the user's questions while using the provided metrics.
             """
-            f"Navigation: Use [[TAB:ACTIONS]] for logic, [[TAB:DASH]] for high-level stats, or [[TAB:ANALYTICS]] for deep dives."
+            f"Navigation: Use [[TAB:ACTIONS]] for tasks, [[TAB:DATA]] for records, or [[TAB:DASH]] for the dashboard. If the user greets you, greet them back warmly before providing insights."
+        )
+    else:
+        return (
+            f"""
+            You are the 'SmartCustomer AI DEEP ADVISOR', acting as a virtual COO. You provide elite, executive-level business consulting.
+            
+            STRICT RESPONSE REQUIREMENTS:
+            1. CONVERSATIONAL & DIRECT: Act as a real, highly-intelligent chatbot. Directly address and answer the user's specific question in detail.
+            2. LENGTH: Provide beautifully explained, detailed answers. If the topic is complex, use 3 to 5 professional paragraphs. Never give short, generic, or superficial answers.
+            3. STRUCTURE: Use Markdown formatting (bolding, lists) to make it highly readable. You do not need to follow a rigid section structure unless it fits the user's question perfectly.
+            4. CONTEXT: User Business Type is {user.business_type.upper()}. Leverage this snapshot: {snapshot}
+            5. TONE: High-confidence, analytical, and encouraging. Reference urban growth tactics like retention funnels to ground your advice.
+            
+            Goal: Act as a dynamic, intelligent virtual COO to completely answer the user's questions while using the provided metrics.
+            """
+            f"Navigation: Use [[TAB:ACTIONS]] for logic, [[TAB:DASH]] for high-level stats, or [[TAB:ANALYTICS]] for deep dives. If the user greets you, greet them back warmly before providing insights."
         )
 
 @router.get("/history", response_model=List[ChatMessage])
@@ -203,9 +234,9 @@ def get_chat_history(user: models.User = Depends(get_current_user)):
         db.close()
 
 @router.post("/chat")
-def advisor_chat(req: AdvisorRequest, user: models.User = Depends(get_current_user)):
+async def advisor_chat(req: AdvisorRequest, user: models.User = Depends(get_current_user)):
     """
-    Multi-Provider AI Advisor: Gemini 2.0 -> Groq (Llama 3) -> Internal Snapshot.
+    Multi-Provider AI Advisor: AgentScope Multi-Agent -> Gemini 2.0 -> Groq -> Internal Snapshot.
     """
     session_factory = RuralSessionLocal if user.business_type == "rural" else UrbanSessionLocal
     db = session_factory()
@@ -214,8 +245,35 @@ def advisor_chat(req: AdvisorRequest, user: models.User = Depends(get_current_us
     if not last_user_message:
         return {"reply": "I'm listening! What's on your mind today?"}
 
-    # 1. Try Gemini 2.0 (High Reasoning) - lazy import only when needed
+    # 1. Try AgentScope Multi-Agent (Premium Experience)
     gemini_key = os.environ.get("GEMINI_API_KEY")
+    if gemini_key:
+        try:
+            orchestrator = get_agent_orchestrator()
+            snapshot = _get_business_snapshot(user, db)
+            
+            reply = await orchestrator.get_multi_agent_advice(
+                user_id=user.id,
+                business_snapshot=snapshot,
+                user_query=last_user_message
+            )
+            
+            # Persist actions to the DB
+            try:
+                action_count = extract_and_save_actions(reply, user.id, db)
+                if action_count > 0:
+                    print(f"DEBUG: Automatically saved {action_count} actions from Multi-Agent response.")
+            except Exception as ae:
+                print(f"DEBUG: Action saving failed: {ae}")
+
+            import re
+            clean_reply = re.sub(r'JSON_DATA:\s*\[.*\]', '', reply, flags=re.DOTALL).strip()
+            
+            return {"reply": clean_reply}
+        except Exception as e:
+            print(f"[AgentScope Failure] {e}. Falling back to standard LLM chain...")
+
+    # 2. Try Standard Gemini 2.0 (LangChain)
     if gemini_key:
         try:
             from langchain_google_genai import ChatGoogleGenerativeAI

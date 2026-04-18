@@ -13,7 +13,9 @@ class DataIngestView {
                     <i class='bx bx-data text-gradient' style="font-size: 2.2rem;"></i>
                     ${t('Data Management', 'डेटा प्रबंधन')}
                 </h1>
+                
         `;
+
         
         // Initial Fetch for Cloud History (Rural Only)
         if (mode === 'rural') {
@@ -50,6 +52,8 @@ class DataIngestView {
                     <button class="btn btn-premium" id="upload-btn" style="width: 100%; height: 3.5rem;" onclick="DataIngestView.submitUpload()">
                         <i class='bx bx-rocket' style="margin-right: 0.5rem;"></i> ${t('Analyze & Ingest Data', 'डेटा का विश्लेषण और सेवन करें')}
                     </button>
+                    
+
                     
                     <div id="upload-status" style="margin-top: 1.5rem; text-align: center;"></div>
                     
@@ -166,7 +170,10 @@ class DataIngestView {
         }
     }
     
+
+
     static async submitUpload() {
+
         const fileInput = document.getElementById('csv-file');
         const statusDiv = document.getElementById('upload-status');
         const btn = document.getElementById('upload-btn');

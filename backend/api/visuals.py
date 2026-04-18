@@ -77,9 +77,17 @@ class VisualRequest(BaseModel):
     context: dict = {}
 
 
+import re
+
 @router.post("/generate")
 async def generate_visual(data: VisualRequest):
     prompt = data.prompt
+    
+    # Clean thinking tags from prompt
+    prompt = re.sub(r'<think>.*?</think>', '', prompt, flags=re.DOTALL)
+    prompt = re.sub(r'<think>.*', '', prompt, flags=re.DOTALL)
+    prompt = re.sub(r'.*?</think>', '', prompt, flags=re.DOTALL)
+    prompt = prompt.strip()
 
     if not GEMINI_API_KEY:
         # PROFESSIONAL SIMULATION MODE — no key, no heavy imports

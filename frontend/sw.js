@@ -1,7 +1,7 @@
 // SmartCustomer AI — Service Worker v7
 // Full offline support, background sync, proper caching strategy
 
-const CACHE_NAME = 'smartcustomer-cache-v8';
+const CACHE_NAME = 'smartcustomer-cache-v9';
 const STATIC_ASSETS = [
     '/',
     '/index.html',

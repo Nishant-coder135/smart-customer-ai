@@ -2,9 +2,9 @@ class DashboardView {
     static async render(containerId, mode) {
         const container = document.getElementById(containerId);
         container.innerHTML = `
-            <div class="loader-container animate-fadeIn">
+            <div class="glass-panel motion-slide-up" style="margin: 2rem; padding: 3.5rem 2rem; text-align: center;">
                 <div class="loader"></div>
-                <p style="color: var(--text-secondary); font-size: 0.85rem; font-weight: 600;">CONSULTING AI ADVISOR...</p>
+                <p style="color: var(--text-secondary); margin-top: 1.5rem; font-size: 0.9rem; font-weight: 700; letter-spacing: 0.05em;">SYNCHRONIZING BUSINESS INTELLIGENCE...</p>
             </div>
         `;
         
@@ -41,7 +41,7 @@ class DashboardView {
         const activeCustomers = kpis.active_customers || 0;
 
         let html = `
-            <div class="container animate-fadeIn">
+            <div class="container motion-slide-up">
                 <!-- Header Row -->
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2rem;">
                     <div>
@@ -66,34 +66,34 @@ class DashboardView {
                 <!-- KPI Grid: 2×2 -->
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
                     <!-- Revenue -->
-                    <div class="card" style="padding: 1.4rem; background: linear-gradient(135deg, var(--surface-color), var(--bg-color)); margin-bottom: 0;">
+                    <div class="glass-panel motion-slide-up motion-stagger-1" style="padding: 1.4rem; background: linear-gradient(135deg, var(--surface-color), var(--glass-bg)); flex: 1;">
                         <div style="color: var(--text-secondary); font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">
-                            <i class='bx bx-rupee' style="font-size: 0.9rem;"></i> ${t('Revenue', 'कुल आय')}
+                            <i class='bx bx-rupee' style="font-size: 0.9rem; color: var(--primary-color);"></i> ${t('Revenue', 'कुल आय')}
                         </div>
-                        <div style="font-size: 1.6rem; font-weight: 900; letter-spacing: -0.03em;">₹${DashboardView.formatNum(totalRevenue)}</div>
-                        <div style="font-size: 0.7rem; color: var(--text-secondary); font-weight: 600; margin-top: 0.3rem;">${t('Total Earnings', 'कुल कमाई')}</div>
+                        <div style="font-size: 1.6rem; font-weight: 900; letter-spacing: -0.04em;">₹${DashboardView.formatNum(totalRevenue)}</div>
+                        <div style="font-size: 0.7rem; color: var(--text-secondary); font-weight: 600; margin-top: 0.3rem; opacity: 0.8;">${t('Total Earnings', 'कुल कमाई')}</div>
                     </div>
                     
                     <!-- Total Customers -->
-                    <div class="card" style="padding: 1.4rem; margin-bottom: 0;">
+                    <div class="glass-panel motion-slide-up motion-stagger-1" style="padding: 1.4rem; flex: 1;">
                         <div style="color: var(--text-secondary); font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">
-                            <i class='bx bx-group' style="font-size: 0.9rem;"></i> ${t('Customers', 'ग्राहक')}
+                            <i class='bx bx-group' style="font-size: 0.9rem; color: var(--secondary-color);"></i> ${t('Customers', 'ग्राहक')}
                         </div>
-                        <div style="font-size: 1.6rem; font-weight: 900;">${DashboardView.formatNum(totalCustomers)}</div>
-                        <div style="font-size: 0.7rem; color: var(--text-secondary); font-weight: 600; margin-top: 0.3rem;">${t('Total Base', 'कुल ग्राहक')}</div>
+                        <div style="font-size: 1.6rem; font-weight: 900; letter-spacing: -0.04em;">${DashboardView.formatNum(totalCustomers)}</div>
+                        <div style="font-size: 0.7rem; color: var(--text-secondary); font-weight: 600; margin-top: 0.3rem; opacity: 0.8;">${t('Total Base', 'कुल ग्राहक')}</div>
                     </div>
                     
                     <!-- Active Customers -->
-                    <div class="card" style="padding: 1.4rem; margin-bottom: 0;">
+                    <div class="glass-panel motion-slide-up motion-stagger-2" style="padding: 1.4rem; flex: 1;">
                         <div style="color: var(--text-secondary); font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">
-                            <i class='bx bx-trending-up' style="font-size: 0.9rem;"></i> ${t('Active', 'सक्रिय')}
+                            <i class='bx bx-trending-up' style="font-size: 0.9rem; color: var(--success-color);"></i> ${t('Active', 'सक्रिय')}
                         </div>
-                        <div style="font-size: 1.6rem; font-weight: 900; color: var(--success-color);">${DashboardView.formatNum(activeCustomers)}</div>
-                        <div style="font-size: 0.7rem; color: var(--text-secondary); font-weight: 600; margin-top: 0.3rem;">${t('Active Now', 'अभी सक्रिय')}</div>
+                        <div style="font-size: 1.6rem; font-weight: 900; color: var(--success-color); letter-spacing: -0.04em;">${DashboardView.formatNum(activeCustomers)}</div>
+                        <div style="font-size: 0.7rem; color: var(--text-secondary); font-weight: 600; margin-top: 0.3rem; opacity: 0.8;">${t('Active Now', 'अभी सक्रिय')}</div>
                     </div>
                     
                     <!-- Health Score -->
-                    <div class="card" style="padding: 1.4rem; border-left: 5px solid ${healthColor}; margin-bottom: 0;">
+                    <div class="glass-panel motion-slide-up motion-stagger-2" style="padding: 1.4rem; border-bottom: 4px solid ${healthColor}; flex: 1;">
                         <div style="color: var(--text-secondary); font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">
                             <i class='bx bx-pulse' style="font-size: 0.9rem;"></i> ${t('Health', 'स्वास्थ्य')}
                         </div>
@@ -195,18 +195,8 @@ class DashboardView {
 
     // ── Urban: Return HTML structure only (no script tag) ─────────────────────
     static renderUrbanChartsHTML(segments) {
-        const isHindi = localStorage.getItem('lang') === 'hi';
-        const t = (en, hi) => isHindi ? hi : en;
-        
-        return `
-            <div class="card" style="margin-top: 1.5rem; padding: 1.5rem; margin-bottom: 0;">
-                <h3 style="margin-bottom: 1.25rem; font-weight: 800; font-size: 1rem; display: flex; align-items: center; gap: 0.5rem;">
-                    <i class='bx bx-pie-chart-alt-2' style="color: var(--primary-color);"></i>
-                    ${t('Customer Segmentation', 'ग्राहक विभाजन')}
-                </h3>
-                <div id="segment-chart" style="width: 100%; height: 240px;"></div>
-            </div>
-        `;
+        // Feature removed as per request to remove blank space segmentation
+        return '';
     }
 
     // ── Urban: Init Plotly AFTER HTML is in DOM ────────────────────────────────

@@ -23,10 +23,10 @@ class ActionsView {
                     </h1>
                     <p style="color: var(--text-secondary); margin-top: 0.5rem; font-size: 1rem; font-weight: 500;">Your ML-driven prioritized tasks for maximum growth.</p>
                 </div>
-                <div id="actions-content" class="animate-fadeIn">
-                    <div class="loader-container" style="text-align: center; padding: 3rem;">
+                <div id="actions-content" class="motion-slide-up">
+                    <div class="glass-panel" style="padding: 3rem; text-align: center;">
                         <div class="loader"></div>
-                        <p style="margin-top: 1.5rem; color: var(--text-secondary); font-weight: 600;">SIMULATING MARKET SCENARIOS...</p>
+                        <p style="margin-top: 1.5rem; color: var(--text-secondary); font-weight: 700; letter-spacing: 0.05em;">ORCHESTRATING STRATEGIC AGENTS...</p>
                     </div>
                 </div>
             </div>
@@ -596,12 +596,12 @@ class ActionsView {
         
         if (actions.length === 0) {
             content.innerHTML = `
-                <div class="card animate-fadeIn" style="text-align: center; padding: 4rem 2rem; border: 2px dashed var(--border-color); background: var(--bg-color);">
-                    <div style="background: var(--primary-light); width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; color: var(--primary-color);">
+                <div class="glass-panel motion-slide-up" style="text-align: center; padding: 4rem 2rem;">
+                    <div style="background: var(--primary-light); width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; color: var(--primary-color); box-shadow: var(--shadow-glow);">
                         <i class='bx bx-check-double' style="font-size: 3rem;"></i>
                     </div>
-                    <h3 style="font-size: 1.25rem; font-weight: 800;">All Good Today! 🎉</h3>
-                    <p style="color: var(--text-secondary); margin-top: 0.75rem; line-height: 1.6;">Your business is performing well across all customer segments. No urgent actions needed right now. Check back tomorrow for fresh insights.</p>
+                    <h3 style="font-size: 1.25rem; font-weight: 900; letter-spacing: -0.02em;">All Systems Optimal 🎉</h3>
+                    <p style="color: var(--text-secondary); margin-top: 0.75rem; line-height: 1.6; font-weight: 500;">Your store is running efficiently. No urgent interventions required. Check back after your next data sync.</p>
                 </div>
             `;
             return;
@@ -719,29 +719,36 @@ class ActionsView {
                     <i class='bx bx-refresh'></i> Live
                 </div>
             </div>
-            <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+            <div style="display: flex; flex-direction: column; gap: 1.75rem;">
         `;
 
         actions.forEach((action, idx) => {
             const plan = getActionPlan(action);
             const segment = action.target_segment || action.target || 'Your Customers';
-            const isUrgent = plan.score > 70;
+            const priority = action.priority || 'medium';
+            const priorityColor = priority === 'high' ? 'var(--danger-color)' : (priority === 'medium' ? 'var(--primary-color)' : 'var(--success-color)');
+            const priorityLabel = priority.toUpperCase();
+            
+            const title = action.title || plan.title;
 
             html += `
-                <div class="card animate-fadeIn" style="border-left: 5px solid ${plan.color}; padding: 0; overflow: hidden;">
+                <div class="glass-panel motion-slide-up motion-stagger-${(idx % 3) + 1}" style="border-left: 6px solid ${priorityColor}; padding: 0;">
                     
                     <!-- Card Header -->
                     <div style="padding: 1.25rem 1.4rem 1rem; border-bottom: 1px solid var(--border-color);">
                         <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.75rem;">
                             <div style="flex: 1;">
                                 <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
-                                    <span style="font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: ${plan.color};">
-                                        ${isUrgent ? '🔴 Act Today' : '🔵 This Week'} · Priority ${idx + 1}
+                                    <span style="font-size: 0.65rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.08em; color: ${priorityColor}; background: ${priorityColor}15; padding: 0.2rem 0.5rem; border-radius: 4px;">
+                                        ${priorityLabel} PRIORITY
+                                    </span>
+                                    <span style="font-size: 0.65rem; font-weight: 700; color: var(--text-secondary);">
+                                        · ID: #${action.id}
                                     </span>
                                 </div>
-                                <div style="display: flex; align-items: center; gap: 0.6rem;">
-                                    <span style="font-size: 1.5rem;">${plan.icon}</span>
-                                    <h3 style="font-size: 1rem; font-weight: 900; letter-spacing: -0.02em; line-height: 1.3;">${plan.title}</h3>
+                                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                    <span style="font-size: 1.75rem;">${plan.icon}</span>
+                                    <h3 style="font-size: 1.15rem; font-weight: 900; letter-spacing: -0.03em; line-height: 1.25;">${title}</h3>
                                 </div>
                                 <div style="margin-top: 0.5rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
                                     <span style="font-size: 0.68rem; font-weight: 700; padding: 0.2rem 0.55rem; background: ${plan.color}15; color: ${plan.color}; border-radius: 6px; border: 1px solid ${plan.color}30;">

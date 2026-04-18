@@ -44,6 +44,104 @@
     }
 })();
 
+// ── Navigation & Shell State Management ──────────────────────────────────────
+window._appLocked = false;
+
+window.unlockApp = async function() {
+    window._appLocked = false;
+    localStorage.setItem('sc_app_unlocked', 'true');
+    console.log("[App] AI Layer Unlocked Persistently.");
+    // Dynamically unlock navigation items
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.classList.remove('nav-locked');
+    });
+};
+
+window.switchTab = function(tabName, forced = false) {
+    let targetTab = (tabName || 'dashboard').toLowerCase();
+    if (targetTab === 'dash') targetTab = 'dashboard';
+
+    // Check both memory flag and persistence
+    const persistentlyUnlocked = localStorage.getItem('sc_app_unlocked') === 'true';
+    if (window._appLocked && !persistentlyUnlocked && targetTab !== 'data') {
+        if (typeof showToast === 'function') {
+            showToast("AI Layer Locked: Upload CSV data first", "error");
+        }
+        return;
+    }
+
+    const navItems = document.querySelectorAll('.nav-item');
+    const mainContent = document.getElementById('main-content');
+    const mode = localStorage.getItem('businessMode') || 'urban';
+
+    if (!mainContent) return;
+
+    // Reset nav state
+    navItems.forEach(item => {
+        item.classList.remove('active');
+        if (forced && item.getAttribute('data-tab') !== 'data') {
+            item.classList.add('nav-locked');
+        } else {
+            item.classList.remove('nav-locked');
+        }
+    });
+    
+    const activeItem = document.querySelector(`.nav-item[data-tab="${targetTab}"]`);
+    if (activeItem) activeItem.classList.add('active');
+
+    const viewLoader = document.getElementById('view-loader');
+    
+    // Smooth transition
+    mainContent.style.opacity = '0';
+    if (viewLoader) viewLoader.classList.add('active');
+    
+    // Reset layout defaults
+    mainContent.style.padding = '';
+    mainContent.style.height = '';
+    mainContent.style.display = '';
+    mainContent.style.flexDirection = '';
+    mainContent.style.overflow = '';
+    mainContent.style.paddingTop = '6.5rem';
+    mainContent.style.paddingBottom = 'calc(8rem + env(safe-area-inset-bottom))';
+    mainContent.style.minHeight = '100vh';
+    
+    setTimeout(() => {
+        try {
+            switch(targetTab) {
+                case 'dashboard':  DashboardView.render('main-content', mode); break;
+                case 'actions':    ActionsView.render('main-content', mode); break;
+                case 'customers':  CustomersView.render('main-content', mode); break;
+                case 'data':       DataIngestView.render('main-content', mode); break;
+                case 'more':       renderMenuGrid(); break;
+                
+                // Integrated Sub-modules
+                case 'advisor':    AdvisorView.render('main-content', mode); break;
+                case 'analytics':  AnalyticsView.render('main-content', mode); break;
+                case 'anomaly':    AnomalyView.render('main-content', mode); break;
+                case 'compare':    CompareView.render('main-content', mode); break;
+                case 'predict':    PredictView.render('main-content', mode); break;
+                case 'quality':    QualityView.render('main-content', mode); break;
+                case 'simulator':  SimulatorView.render('main-content', mode); break;
+                case 'export':     ExportView.render('main-content', mode); break;
+                
+                case 'settings':   SettingsView.render('main-content', mode); break;
+                default:           DashboardView.render('main-content', mode);
+            }
+            
+            // Success:Reveal content
+            mainContent.style.opacity = '1';
+            if (viewLoader) viewLoader.classList.remove('active');
+            window.scrollTo({ top: 0, behavior: 'instant' });
+        } catch (err) {
+            console.error("[Navigation] View render failed:", err);
+            // Emergency reveal so user isn't stuck behind loader
+            mainContent.style.opacity = '1';
+            if (viewLoader) viewLoader.classList.remove('active');
+            if (typeof showToast === 'function') showToast("Error loading view. Please retry.", "error");
+        }
+    }, 300);
+};
+
 window.initApp = async function() {
     // ── Environment Safety Check ───────────────────────────────────────────
     if (window.location.protocol === 'file:') {
@@ -91,21 +189,31 @@ window.initApp = async function() {
         
         // ── Ingestion-First Navigation Guard ──────────────────────────────────
         let startTab = window._startTab || 'dashboard';
+        const persistentlyUnlocked = localStorage.getItem('sc_app_unlocked') === 'true';
+        
         window._appLocked = false;
 
-        if (dashData.mode === 'urban' && dashData.has_data === false) {
+        // Force lock if Urban mode has no data AND hasn't been persistently unlocked
+        if (dashData.mode === 'urban' && dashData.has_data === false && !persistentlyUnlocked) {
             window._appLocked = true;
             startTab = 'data';
-            // Show toast after shell renders
             setTimeout(() => {
                 showToast("Action Required: Please upload your retail CSV to activate AI Dashboard.", "warning", 6000);
             }, 1000);
+        } else if (dashData.has_data === true) {
+            // Guarantee persistence if backend says we have data
+            localStorage.setItem('sc_app_unlocked', 'true');
         }
 
-        renderMainShell(dashData.mode, newPhone, dashData.kpis?.active_customers || 0);
+        // Persist mode if returned from backend
+        if (dashData.mode) {
+            localStorage.setItem('businessMode', dashData.mode);
+        }
         
-        // Render initial view
-        window.switchTab(startTab);
+        renderMainShell(dashData.mode || localStorage.getItem('businessMode') || 'urban', newPhone, dashData.kpis?.active_customers || 0);
+        
+        // Render initial view - pass locking state to switchTab to properly gray out other tabs
+        window.switchTab(startTab, window._appLocked);
         // Reveal bottom nav — guarantee it always shows even if fonts.ready stalls or DOM is slow
         const revealBottomNav = () => {
             const nav = document.getElementById('app-bottom-nav');
@@ -150,6 +258,14 @@ window.initApp = async function() {
 
     } catch (error) {
         console.error("Session Validation Failed:", error);
+        
+        // Soften the logout: If it's a 401, inform the user before clearing
+        if (error.status === 401 || (error.response && error.response.status === 401)) {
+            showToast("Session Expired: Please log in again.", "warning");
+        } else {
+            console.warn("[App] Critical connection failure. Retrying shell...");
+        }
+
         localStorage.removeItem('auth_token');
         
         const root = document.getElementById('auth-root') || document.getElementById('app');
@@ -157,7 +273,6 @@ window.initApp = async function() {
             root.innerHTML = '<div id="auth-root" class="animate-fadeIn"></div>';
             LoginView.render('auth-root');
         } else {
-            // Fallback: if DOM is not ready, reload
             window.location.reload();
         }
     } finally {
@@ -230,14 +345,28 @@ function renderMainShell(mode, userName, activeCustomers) {
                             Install App
                         </button>
                         
-                        <!-- Mode Badge -->
-                        <span style="font-size: 0.65rem; font-weight: 800; padding: 0.35rem 0.65rem; border-radius: 30px; text-transform: uppercase; letter-spacing: 0.05em; background: ${mode === 'rural' ? 'rgba(16,185,129,0.12)' : 'var(--primary-light)'}; color: ${mode === 'rural' ? 'var(--success-color)' : 'var(--primary-color)'};">
+                        <!-- Mode Badge (Interactive) -->
+                        <button 
+                            onclick="window.toggleModeInfo()"
+                            style="cursor: pointer; font-size: 0.65rem; font-weight: 800; padding: 0.45rem 0.85rem; border-radius: 30px; border: none; text-transform: uppercase; letter-spacing: 0.05em; background: ${mode === 'rural' ? 'rgba(16,185,129,0.12)' : 'var(--primary-light)'}; color: ${mode === 'rural' ? 'var(--success-color)' : 'var(--primary-color)'}; box-shadow: var(--shadow-sm); transition: transform 0.2s active; display: flex; align-items: center; gap: 0.4rem;"
+                            onmousedown="this.style.transform='scale(0.95)'"
+                            onmouseup="this.style.transform='scale(1)'"
+                        >
                             ${mode === 'rural' ? '🌾 Rural' : '🏙️ Urban'}
-                        </span>
-                        <!-- Avatar / Settings -->
-                        <div style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); display: flex; align-items: center; justify-content: center; color: white; font-size: 0.85rem; font-weight: 800; box-shadow: var(--shadow-sm); cursor: pointer;" onclick="switchTab('settings')" title="Settings">
-                            <i class='bx bx-cog' style="font-size: 1.2rem;"></i>
+                            ${window._appLocked ? '<span style="opacity: 0.7; font-size: 0.6rem;">🔒 LOCKED</span>' : ''}
+                        </button>
+                        
+                        <!-- Settings Icon -->
+                        <div 
+                            style="width: 36px; height: 36px; border-radius: 50%; background: var(--bg-card); border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; color: var(--text-primary); cursor: pointer; transition: all 0.2s; box-shadow: var(--shadow-sm);" 
+                            onclick="switchTab('settings')" 
+                            onmouseover="this.style.borderColor='var(--primary-color)'; this.style.color='var(--primary-color)'"
+                            onmouseout="this.style.borderColor='var(--border-color)'; this.style.color='var(--text-primary)'"
+                            title="Settings"
+                        >
+                            <i class='bx bx-cog' style="font-size: 1.1rem;"></i>
                         </div>
+
                     </div>
                 </div>
             </header>
@@ -277,87 +406,6 @@ function renderMainShell(mode, userName, activeCustomers) {
             </nav>
         </div>
     `;
-}
-
-window.switchTab = function(tabName, forced = false) {
-    // Normalize tab names
-    let targetTab = tabName.toLowerCase();
-    if (targetTab === 'dash') targetTab = 'dashboard';
-
-    if (window._appLocked && targetTab !== 'data') {
-        showToast("AI Layer Locked: Upload CSV data first", "error");
-        return;
-    }
-
-    const navItems = document.querySelectorAll('.nav-item');
-    const mainContent = document.getElementById('main-content');
-    const mode = localStorage.getItem('businessMode') || 'urban';
-
-    if (!mainContent) return;
-
-    // Reset nav state
-    navItems.forEach(item => {
-        item.classList.remove('active');
-        if (forced && item.getAttribute('data-tab') !== 'data') {
-            item.classList.add('nav-locked');
-        } else {
-            item.classList.remove('nav-locked');
-        }
-    });
-    
-    const activeItem = document.querySelector(`.nav-item[data-tab="${targetTab}"]`);
-    if (activeItem) activeItem.classList.add('active');
-
-    const viewLoader = document.getElementById('view-loader');
-    
-    // Smooth transition
-    mainContent.style.opacity = '0';
-    if (viewLoader) viewLoader.classList.add('active');
-    
-    mainContent.style.padding = '';
-    mainContent.style.height = '';
-    mainContent.style.display = '';
-    mainContent.style.flexDirection = '';
-    mainContent.style.overflow = '';
-    mainContent.style.paddingTop = '6.5rem';
-    mainContent.style.paddingBottom = 'calc(8rem + env(safe-area-inset-bottom))';
-    mainContent.style.minHeight = '100vh';
-    
-    setTimeout(() => {
-        try {
-            switch(targetTab) {
-                case 'dashboard':  DashboardView.render('main-content', mode); break;
-                case 'actions':    ActionsView.render('main-content', mode); break;
-                case 'data':       DataIngestView.render('main-content', mode); break;
-                case 'customers':  CustomersView.render('main-content', mode); break;
-                case 'more':       renderMenuGrid(); break;
-                // Sub-modules
-                case 'analytics':  AnalyticsView.render('main-content', mode); break;
-                case 'predict':    PredictView.render('main-content', mode); break;
-                case 'simulator':  SimulatorView.render('main-content', mode); break;
-                case 'compare':    CompareView.render('main-content', mode); break;
-                case 'anomaly':    AnomalyView.render('main-content', mode); break;
-                case 'quality':    QualityView.render('main-content', mode); break;
-                case 'export':     ExportView.render('main-content', mode); break;
-                case 'settings':   SettingsView.render('main-content', mode); break;
-                case 'advisor':    AdvisorView.render('main-content', mode); break;
-            }
-            
-            // Re-hide loader and reveal content
-            mainContent.style.opacity = '1';
-            if (viewLoader) viewLoader.classList.remove('active');
-            
-            window.scrollTo(0, 0);
-            // Apply translations
-            if (window.I18n) window.I18n.apply();
-            setTimeout(() => { if (window.I18n) window.I18n.apply(); }, 900);
-        } catch (e) {
-            console.error("Routing error:", e);
-            mainContent.innerHTML = `<div class="container"><div class="card"><h3>Module Error</h3><p>${tabName} could not be initialized: ${e.message}</p></div></div>`;
-            mainContent.style.opacity = '1';
-            if (viewLoader) viewLoader.classList.remove('active');
-        }
-    }, 300); // 300ms for a more intentional native transition feel
 }
 
 function renderMenuGrid() {
@@ -550,6 +598,12 @@ window.showToast = function(message, type = 'info', duration = 4000) {
         toast.style.transform = 'translateX(-50%) translateY(150%)';
         setTimeout(() => toast.remove(), 500);
     }, duration);
+};
+
+window.toggleModeInfo = function() {
+    const currentMode = localStorage.getItem('businessMode') || 'urban';
+    const otherMode = currentMode === 'urban' ? 'Rural' : 'Urban';
+    showToast(`Account Locked to ${currentMode.toUpperCase()}. To use ${otherMode} mode, please register a unique ${otherMode} account.`, "info", 5000);
 };
 
 document.addEventListener('DOMContentLoaded', window.initApp);

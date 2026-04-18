@@ -362,6 +362,7 @@ class ApiClient {
     }
 
 
+
     static logout() {
         console.warn("ApiClient: PERFORMING SCORCHED EARTH LOGOUT...");
         // Preserve only non-sensitive visual preferences

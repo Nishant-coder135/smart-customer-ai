@@ -16,3 +16,5 @@ charset-normalizer
 requests
 matplotlib
 fpdf2
+agentscope
+aiosqlite

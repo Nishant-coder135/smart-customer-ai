@@ -62,9 +62,12 @@ class Action(Base):
     __tablename__ = "actions"
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=False)
+    title = Column(String, nullable=True)
     action_text = Column(String)
     target_segment = Column(String)
     reason = Column(String, nullable=True)
+    priority = Column(String, default="medium") # high, medium, low
+    status = Column(String, default="pending") # pending, executed, dismissed
     expected_revenue = Column(Float)
     expected_retention = Column(Float)
     confidence_score = Column(Float)

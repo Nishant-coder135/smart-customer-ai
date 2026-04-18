@@ -150,54 +150,72 @@ def get_todays_actions(user: models.User = Depends(get_current_user)):
             multiplier = max(0.5, min(1.5, avg_ratio)) # Cap multiplier between 0.5x and 1.5x
             historical_multipliers[text] = multiplier
 
-        # Call Decision Engine
-        daily_actions = generate_daily_actions(cust_dicts, historical_multipliers)
+        # FETCH RECENT ACTIONS FROM DB (including those saved by Multi-Agent Advisor)
+        db_actions = db.query(models.Action).filter(
+            models.Action.user_id == user.id,
+            models.Action.status == "pending"
+        ).order_by(models.Action.created_at.desc()).limit(15).all()
         
-        saved_actions = []
-        for act in daily_actions:
-            # Check if recently created to avoid duplicates today
-            existing = db.query(models.Action).filter(
-                models.Action.action_text == act["action_text"],
-                models.Action.target_segment == act["target_segment"],
-                models.Action.user_id == user.id
-            ).first()
+        final_actions = []
+        for action in db_actions:
+            final_actions.append({
+                "id": action.id,
+                "title": action.title or action.action_text[:30],
+                "action_text": action.action_text,
+                "target_segment": action.target_segment,
+                "reason": action.reason or "Strategic recommendation",
+                "explanation": action.pitch or "AI generated business tactic.",
+                "priority": action.priority or "medium",
+                "status": action.status or "pending",
+                "expected_revenue": action.expected_revenue,
+                "expected_retention": action.expected_retention,
+                "confidence_score": action.confidence_score
+            })
             
-            if not existing:
+        # If we have no recent actions, trigger the decision engine fallback
+        if not final_actions:
+            # Call Decision Engine
+            daily_actions = generate_daily_actions(cust_dicts, historical_multipliers)
+            
+            for act in daily_actions:
                 new_action = models.Action(
                     user_id=user.id,
+                    title=act.get("title", f"Plan for {act['target_segment']}"),
                     action_text=act["action_text"],
                     target_segment=act["target_segment"],
                     reason=act["reason"],
                     expected_revenue=act["expected_revenue"],
                     expected_retention=act["expected_retention"],
-                    confidence_score=act["confidence_score"]
+                    confidence_score=act["confidence_score"],
+                    priority="medium",
+                    status="pending"
                 )
-                db.add(new_action)   # MUST register in session before commit
+                db.add(new_action)
                 db.commit()
                 db.refresh(new_action)
-                existing = new_action
                 
-            # Efficient LLM usage: Check if we already have a cached pitch/template in DB
-            if not existing.pitch or not existing.template:
-                print(f"[LLM] Generating new pitch for action: {existing.id}")
-                pitch, template = _generate_pitch_and_template(existing.action_text, existing.target_segment, user.business_type)
-                existing.pitch = pitch
-                existing.template = template
-                db.add(existing)
+                # Fetch pitch/template
+                pitch, template = _generate_pitch_and_template(new_action.action_text, new_action.target_segment, user.business_type)
+                new_action.pitch = pitch
+                new_action.template = template
+                db.add(new_action)
                 db.commit()
+                
+                final_actions.append({
+                    "id": new_action.id,
+                    "title": new_action.title,
+                    "action_text": new_action.action_text,
+                    "target_segment": new_action.target_segment,
+                    "reason": new_action.reason,
+                    "explanation": new_action.pitch,
+                    "priority": new_action.priority,
+                    "status": new_action.status,
+                    "expected_revenue": new_action.expected_revenue,
+                    "expected_retention": new_action.expected_retention,
+                    "confidence_score": new_action.confidence_score
+                })
             
-            saved_actions.append({
-                "id": existing.id,
-                "action_text": existing.action_text,
-                "target_segment": existing.target_segment,
-                "reason": existing.reason,
-                "explanation": existing.pitch,
-                "expected_revenue": existing.expected_revenue,
-                "expected_retention": existing.expected_retention,
-                "confidence_score": existing.confidence_score
-            })
-            
-        final_response = {"actions": saved_actions}
+        final_response = {"actions": final_actions}
         # Update in-memory cache
         ACTIONS_CACHE[cache_key] = (now, final_response)
         return final_response

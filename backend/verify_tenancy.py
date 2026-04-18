@@ -2,10 +2,10 @@ import sys, os, uuid
 # Add current dir to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from database import UrbanSessionLocal, RuralSessionLocal, urban_engine, rural_engine
-import models
+from backend.database import UrbanSessionLocal, RuralSessionLocal, urban_engine, rural_engine
+from backend import models
 import pandas as pd
-from api.auth import get_password_hash
+from backend.api.auth import get_password_hash
 
 def test_multi_tenancy():
     print("=== SmartCustomer Multi-Tenancy Verification ===")
@@ -17,8 +17,13 @@ def test_multi_tenancy():
     u1_phone = "1111111111"
     u2_phone = "2222222222"
     
-    # Remove if existing
-    db.query(models.User).filter(models.User.phone.in_([u1_phone, u2_phone])).delete(synchronize_session=False)
+    # Remove if existing - DELETE CHILDREN FIRST
+    test_phones = [u1_phone, u2_phone]
+    existing_users = db.query(models.User).filter(models.User.phone.in_(test_phones)).all()
+    if existing_users:
+        u_ids = [u.id for u in existing_users]
+        db.query(models.Customer).filter(models.Customer.user_id.in_(u_ids)).delete(synchronize_session=False)
+        db.query(models.User).filter(models.User.id.in_(u_ids)).delete(synchronize_session=False)
     db.commit()
     
     h1 = get_password_hash("pass1")
@@ -67,10 +72,16 @@ def test_multi_tenancy():
         print(f"  [FAIL] User1 data mismatch. Found {len(u1_customers)}.")
         sys.exit(1)
 
+    
     # 5. Rural Isolation Test
     db_rural = RuralSessionLocal()
     r1_phone = "3333333333"
-    db_rural.query(models.User).filter(models.User.phone == r1_phone).delete(synchronize_session=False)
+    
+    # Clean Rural first
+    existing_rural = db_rural.query(models.User).filter(models.User.phone == r1_phone).first()
+    if existing_rural:
+        db_rural.query(models.Transaction).filter(models.Transaction.user_id == existing_rural.id).delete()
+        db_rural.query(models.User).filter(models.User.id == existing_rural.id).delete()
     db_rural.commit()
     
     h3 = get_password_hash("pass3")
@@ -81,15 +92,13 @@ def test_multi_tenancy():
     
     print(f"  [OK] Registered Rural User (ID: {user_rural.id})")
     
-    # Check if they see Urban data (they shouldn't even if we queried wrongly because of separate engines, but let's be sure)
-    # Actually models.Customer is in the same metadata but in practice we use UrbanSessionLocal vs RuralSessionLocal
-    
-    # 6. Cleanup
-    db.query(models.User).filter(models.User.phone.in_([u1_phone, u2_phone])).delete(synchronize_session=False)
-    db.query(models.Customer).filter(models.Customer.user_id == user1.id).delete()
+    # 6. Final Cleanup
+    db.query(models.Customer).filter(models.Customer.user_id.in_([user1.id, user2.id])).delete()
+    db.query(models.User).filter(models.User.id.in_([user1.id, user2.id])).delete()
     db.commit()
     
-    db_rural.query(models.User).filter(models.User.phone == r1_phone).delete()
+    db_rural.query(models.Transaction).filter(models.Transaction.user_id == user_rural.id).delete()
+    db_rural.query(models.User).filter(models.User.id == user_rural.id).delete()
     db_rural.commit()
     
     print("\nALL TENANCY CHECKS PASSED [Isolated]")

@@ -2,6 +2,11 @@ import os
 import datetime
 import random
 import collections
+import traceback
+import gc
+import pandas as pd
+import numpy as np
+
 
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
@@ -56,13 +61,12 @@ async def upload_csv(file: UploadFile = File(...), user: models.User = Depends(g
     if user.business_type != "urban":
         raise HTTPException(status_code=403, detail="CSV upload only supported for Urban mode.")
     
-    import pandas as pd
+    import io
     db = UrbanSessionLocal()
     try:
-        # V3 MEMORY-OPTIMIZED STREAMING PIPELINE
-        # We sample the first 20KB to detect encoding without buffering the whole file
+        # We sample the first 20KB to detect encoding
         sample = await file.read(20480) 
-        await file.seek(0) # Reset pointer
+        await file.seek(0)
         
         is_gz = file.filename and file.filename.endswith('.gz')
         
@@ -71,35 +75,57 @@ async def upload_csv(file: UploadFile = File(...), user: models.User = Depends(g
             from charset_normalizer import from_bytes
             detected = from_bytes(sample).best()
             encoding = (detected.encoding if detected else 'utf-8-sig') or 'utf-8-sig'
-            print(f"DEBUG: Sample detected encoding: {encoding} (GZ: {is_gz})")
+            if encoding.lower() == 'ascii':
+                encoding = 'latin-1'
+            print(f"DEBUG: Selected encoding: {encoding}")
         except Exception:
-            encoding = 'utf-8-sig'
+            encoding = 'latin-1'
 
-        # Stream decompression + Pandas loading
+        # Decompression handle
         if is_gz:
             import gzip
-            # We wrap the underlying file-like object directly
             stream = gzip.GzipFile(fileobj=file.file)
         else:
             stream = file.file
 
         try:
-            # Low Memory parsing
+            # Primary read
             df = pd.read_csv(
                 stream, 
                 encoding=encoding, 
-                low_memory=True,
-                on_bad_lines='skip'
+                low_memory=False, 
+                on_bad_lines='skip',
+                engine='python'
             )
-        except Exception as e:
-            print(f"DEBUG: Pandad stream read failed: {e}")
-            raise HTTPException(status_code=400, detail=f"CSV Parsing Failed: {str(e)}")
+        except Exception as read_err:
+            print(f"DEBUG: Primary read failed: {read_err}. Attempting fallback...")
+            await file.seek(0)
+            content = await file.read()
+            df = pd.read_csv(io.BytesIO(content), encoding='latin-1', on_bad_lines='skip')
 
         if df is None or df.empty:
             return {"message": "CSV is empty or could not be parsed"}
             
-        print(f"DEBUG: RAW CSV Columns: {df.columns.tolist()}")
+        print(f"DEBUG: Loaded DF with {len(df)} rows. Mapping headers...")
+        # NOTE: db is managed inside process_dataframe — do NOT double-close
+        return await process_dataframe(df, user, db)
+    except HTTPException:
+        # Re-raise HTTPExceptions from process_dataframe directly — don't re-wrap them
+        raise
+    except Exception as e:
+        print(f"UNHANDLED UPLOAD ERROR: {e}")
+        traceback.print_exc()
+        try:
+            db.close()
+        except Exception:
+            pass
+        raise HTTPException(status_code=500, detail=f"Upload Error: {str(e)}")
 
+
+
+async def process_dataframe(df: pd.DataFrame, user: models.User, db: Session):
+    # Logic moved to a helper to support both Upload and Seed
+    try:
         # --- BULLETPROOF HEADER NORMALIZATION ---
         def aggressive_normalize(name):
             import re
@@ -218,19 +244,25 @@ async def upload_csv(file: UploadFile = File(...), user: models.User = Depends(g
 
         
     except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=f"Ingestion Fail: {str(e)}")
+        traceback.print_exc()
+        try:
+            db.rollback()
+        except Exception:
+            pass
+        raise HTTPException(status_code=500, detail=f"Ingestion Failed: {str(e)}")
     finally:
-        db.close()
+        try:
+            db.close()
+        except Exception:
+            pass
+
 
 # --- DASHBOARD & ANALYTICS --- #
 
 @router.get("/dashboard_data")
 def get_dashboard_data(mode: Optional[str] = None, user: models.User = Depends(get_current_user)):
     # Normalize mode
-    import numpy as np
-    import pandas as pd
-    active_mode = mode or user.business_type or "urban"
+    active_mode = (mode or user.business_type or "urban").lower()
     
     # 1. Check Cache (Mode-Aware)
     cached = get_cached_dashboard(user.id, active_mode)
