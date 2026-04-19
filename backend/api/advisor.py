@@ -387,9 +387,12 @@ def run_ai_chain(llm, user, db, user_input, session_factory):
     return {"reply": reply_text}
 
 def run_internal_fallback(user, db, user_question: str = ""):
-    """Rich keyword-aware fallback when AI APIs are unavailable.
-    Reads the actual user question and gives specific, detailed, data-driven answers.
-         if user.business_type == "rural":
+    """
+    Rich keyword-aware fallback when AI APIs are unavailable.
+    """
+    q = user_question.lower()
+    try:
+        if user.business_type == "rural":
             txs = db.query(models.Transaction).filter(
                 models.Transaction.user_id == user.id,
                 models.Transaction.business_mode == "rural"
@@ -483,11 +486,7 @@ def run_internal_fallback(user, db, user_question: str = ""):
                 f"2. **Conversion of Regulars**: Target the middle 40% of your base for a 'Tier-Up' promotion to move them into the VIP category.\n"
                 f"3. **Churn Defense**: Use the **[[TAB:ANALYTICS]]** tab to identify high-probability leavers and deploy automated Win-Back emails.\n\n"
                 f"Ask me about Churn, Growth, or specific Customer Segments!"
-            )}       f"• *'What's the fastest way to grow revenue?'*\n"
-                    f"• *'Who are my best customers and how do I keep them?'*\n"
-                    f"• *'What should I do today?'*\n\n"
-                    f"Or go directly to **[[TAB:ACTIONS]]** for your AI-prioritized task list."
-                )}
+            )}
     except Exception as e:
         print(f"[Internal Fallback Error] {e}")
         return {"reply": "I'm currently processing your business data. Your records are safe! Please check the **[[TAB:ACTIONS]]** tab for your daily priorities, or try asking me a specific question like 'How do I reduce churn?' or 'How can I grow revenue?'"}
