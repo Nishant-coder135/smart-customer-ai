@@ -242,7 +242,8 @@ def get_chat_history(user: models.User = Depends(get_current_user)):
 @router.post("/chat")
 async def advisor_chat(req: AdvisorRequest, user: models.User = Depends(get_current_user)):
     """
-    AI Advisor: google-genai (direct) -> LangChain Gemini -> Groq -> Internal Fallback.
+    AI Advisor: Groq llama-3.3-70b (primary, confirmed working) -> Gemini (if quota available) -> Internal Fallback.
+    NOTE: Gemini free-tier quota is exhausted, so Groq is the reliable primary.
     """
     session_factory = RuralSessionLocal if user.business_type == "rural" else UrbanSessionLocal
     db = session_factory()
@@ -252,25 +253,68 @@ async def advisor_chat(req: AdvisorRequest, user: models.User = Depends(get_curr
         return {"reply": "I'm listening! What's on your mind today?"}
 
     system_prompt = _build_system_prompt(user, db)
-    gemini_key = os.environ.get("GEMINI_API_KEY")
 
-    # --- PRIMARY: Native google-genai SDK (most reliable on Render) ---
+    # Build conversation history for context (last 10 messages)
+    history_messages = []
+    for msg in req.messages[:-1][-10:]:
+        history_messages.append({
+            "role": "user" if msg.role == "user" else "assistant",
+            "content": msg.content
+        })
+
+    # --- PRIMARY: Native Groq SDK (confirmed working, free, fast) ---
+    groq_key = os.environ.get("GROQ_API_KEY")
+    if groq_key:
+        try:
+            from groq import Groq
+            client = Groq(api_key=groq_key)
+
+            messages_payload = [{"role": "system", "content": system_prompt}]
+            messages_payload.extend(history_messages)
+            messages_payload.append({"role": "user", "content": last_user_message})
+
+            print(f"[Advisor] Calling Groq for user {user.id}: '{last_user_message[:60]}...'")
+            response = client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=messages_payload,
+                temperature=0.75,
+                max_tokens=4096,
+            )
+            reply_text = response.choices[0].message.content.strip()
+            print(f"[Advisor] Groq responded ({len(reply_text)} chars). SUCCESS.")
+
+            if reply_text:
+                # Persist chat to DB
+                try:
+                    db2 = session_factory()
+                    db2.add(models.ChatMessage(user_id=user.id, role="user", content=last_user_message))
+                    db2.add(models.ChatMessage(user_id=user.id, role="assistant", content=reply_text))
+                    db2.commit()
+                    db2.close()
+                except Exception as save_err:
+                    print(f"[Advisor] History save warning (non-fatal): {save_err}")
+
+                db.close()
+                return {"reply": reply_text}
+        except Exception as e:
+            print(f"[Groq PRIMARY Failure] {type(e).__name__}: {e}")
+
+    # --- SECONDARY: Native Gemini SDK (may hit 429 quota) ---
+    gemini_key = os.environ.get("GEMINI_API_KEY")
     if gemini_key:
         try:
             from google import genai
             from google.genai import types as genai_types
 
             client = genai.Client(api_key=gemini_key)
-
-            # Build message history for context
-            chat_history = []
-            for msg in req.messages[:-1]:  # All messages except the last (current)
-                role = "user" if msg.role == "user" else "model"
-                chat_history.append(genai_types.Content(role=role, parts=[genai_types.Part(text=msg.content)]))
+            genai_history = []
+            for msg in history_messages:
+                role = "user" if msg["role"] == "user" else "model"
+                genai_history.append(genai_types.Content(role=role, parts=[genai_types.Part(text=msg["content"])]))
 
             response = client.models.generate_content(
                 model="gemini-2.0-flash",
-                contents=chat_history + [
+                contents=genai_history + [
                     genai_types.Content(role="user", parts=[genai_types.Part(text=last_user_message)])
                 ],
                 config=genai_types.GenerateContentConfig(
@@ -279,10 +323,8 @@ async def advisor_chat(req: AdvisorRequest, user: models.User = Depends(get_curr
                     max_output_tokens=4096,
                 )
             )
-
             reply_text = response.text.strip() if response.text else ""
             if reply_text:
-                # Save to chat history DB
                 try:
                     db2 = session_factory()
                     db2.add(models.ChatMessage(user_id=user.id, role="user", content=last_user_message))
@@ -294,44 +336,12 @@ async def advisor_chat(req: AdvisorRequest, user: models.User = Depends(get_curr
                 db.close()
                 return {"reply": reply_text}
         except Exception as e:
-            print(f"[google-genai Failure] {type(e).__name__}: {e}. Trying LangChain...")
-
-    # --- SECONDARY: LangChain Gemini (with full chat history) ---
-    if gemini_key:
-        try:
-            from langchain_google_genai import ChatGoogleGenerativeAI
-            llm = ChatGoogleGenerativeAI(
-                model="gemini-2.0-flash",
-                google_api_key=gemini_key,
-                temperature=0.75,
-                max_output_tokens=4096
-            )
-            result = run_ai_chain(llm, user, db, last_user_message, session_factory)
-            db.close()
-            return result
-        except Exception as e:
-            print(f"[LangChain Gemini Failure] {type(e).__name__}: {e}. Trying Groq...")
-
-    # --- TERTIARY: Groq (fast open-source LLM) ---
-    groq_key = os.environ.get("GROQ_API_KEY")
-    if groq_key:
-        try:
-            from langchain_groq import ChatGroq
-            llm = ChatGroq(
-                model="llama-3.3-70b-versatile",
-                groq_api_key=groq_key,
-                temperature=0.6,
-                max_tokens=3000
-            )
-            result = run_ai_chain(llm, user, db, last_user_message, session_factory)
-            db.close()
-            return result
-        except Exception as e:
-            print(f"[Groq Failure] {type(e).__name__}: {e}. Using internal fallback...")
+            print(f"[Gemini SECONDARY Failure] {type(e).__name__}: {e}")
 
     # --- FINAL: Keyword-based deterministic fallback ---
-    print("[Advisor] All AI providers failed. Using internal fallback.")
+    print(f"[Advisor] ALL AI providers failed for user {user.id}. Using internal fallback.")
     return run_internal_fallback(user, db, last_user_message)
+
 
 
 def run_ai_chain(llm, user, db, user_input, session_factory):

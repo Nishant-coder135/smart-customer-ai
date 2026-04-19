@@ -10,6 +10,7 @@ python-dotenv
 google-genai
 langchain-google-genai
 langchain-groq
+groq
 langchain-core
 elevenlabs
 charset-normalizer
