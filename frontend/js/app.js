@@ -128,19 +128,34 @@ window.switchTab = function(tabName, forced = false) {
                 default:           DashboardView.render('main-content', mode);
             }
             
-            // Success:Reveal content
+            // Success: Reveal content
             mainContent.style.opacity = '1';
             if (viewLoader) viewLoader.classList.remove('active');
             window.scrollTo({ top: 0, behavior: 'instant' });
         } catch (err) {
             console.error("[Navigation] View render failed:", err);
-            // Emergency reveal so user isn't stuck behind loader
             mainContent.style.opacity = '1';
             if (viewLoader) viewLoader.classList.remove('active');
             if (typeof showToast === 'function') showToast("Error loading view. Please retry.", "error");
         }
+
+        // ALWAYS guarantee the bottom nav is visible after any tab switch
+        // This handles the case where async renders (like DashboardView) may
+        // cause layout shifts that push/cover the nav.
+        const guaranteeNav = () => {
+            const nav = document.getElementById('app-bottom-nav');
+            if (nav) {
+                nav.classList.add('nav-ready');
+                nav.style.opacity = '1';
+                nav.style.pointerEvents = 'auto';
+            }
+        };
+        guaranteeNav(); // immediate
+        setTimeout(guaranteeNav, 400);  // after DashboardView async second render
+        setTimeout(guaranteeNav, 1200); // extra safety for slow network loads
     }, 300);
 };
+
 
 window.initApp = async function() {
     // ── Environment Safety Check ───────────────────────────────────────────

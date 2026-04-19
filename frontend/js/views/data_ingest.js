@@ -255,14 +255,32 @@ class DataIngestView {
     }
 
     static async completeIngestion() {
+        // Unlock all nav items
         if (window.unlockApp) {
             await window.unlockApp();
         }
+
+        // Switch to dashboard
         if (window.switchTab) {
             window.switchTab('dashboard');
         } else {
             window.location.reload();
         }
+
+        // Explicitly force nav visible — critical on mobile where
+        // the post-ingestion state can leave nav hidden.
+        const forceNav = () => {
+            const nav = document.getElementById('app-bottom-nav');
+            if (nav) {
+                nav.classList.add('nav-ready');
+                nav.style.opacity = '1';
+                nav.style.pointerEvents = 'auto';
+            }
+        };
+        forceNav();               // immediate
+        setTimeout(forceNav, 350);   // after switchTab's 300ms delay
+        setTimeout(forceNav, 1000);  // after DashboardView async fetch
+        setTimeout(forceNav, 2500);  // final guarantee for slow networks
     }
 
     static async resetData() {
