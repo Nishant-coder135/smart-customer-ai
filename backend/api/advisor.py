@@ -262,8 +262,15 @@ async def advisor_chat(req: AdvisorRequest, user: models.User = Depends(get_curr
             "content": msg.content
         })
 
-    # --- PRIMARY: Native Groq SDK (confirmed working, free, fast) ---
+    # Render Environment Check
     groq_key = os.environ.get("GROQ_API_KEY")
+    gemini_key = os.environ.get("GEMINI_API_KEY")
+
+    if not groq_key and not gemini_key:
+        print("[Advisor] FATAL: No AI API keys configured.")
+        return {"reply": "⚠️ **Configuration Missing**\n\nThe AI Advisor cannot function because the `GROQ_API_KEY` is not set in your Render environment variables. \n\nPlease go to your Render Dashboard -> Environment, and add `GROQ_API_KEY` to enable AI intelligence."}
+
+    # --- PRIMARY: Native Groq SDK (confirmed working, free, fast) ---
     if groq_key:
         try:
             from groq import Groq
@@ -340,7 +347,15 @@ async def advisor_chat(req: AdvisorRequest, user: models.User = Depends(get_curr
 
     # --- FINAL: Keyword-based deterministic fallback ---
     print(f"[Advisor] ALL AI providers failed for user {user.id}. Using internal fallback.")
-    return run_internal_fallback(user, db, last_user_message)
+    
+    fallback_response = run_internal_fallback(user, db, last_user_message)
+    
+    # If we fell back and the Groq key is explicitly missing from Render, tell the user!
+    if not groq_key:
+        warning_msg = "⚠️ **ACTION REQUIRED:** Your full AI intelligence is paused because `GROQ_API_KEY` is missing from your **Render Dashboard Environment**. Please add it to unlock advanced reasoning, otherwise I am operating in basic template mode.\n\n---\n\n"
+        fallback_response["reply"] = warning_msg + fallback_response["reply"]
+        
+    return fallback_response
 
 
 
