@@ -242,8 +242,7 @@ def get_chat_history(user: models.User = Depends(get_current_user)):
 @router.post("/chat")
 async def advisor_chat(req: AdvisorRequest, user: models.User = Depends(get_current_user)):
     """
-    AI Advisor: Gemini 2.0 Flash (direct) -> Groq -> Internal Snapshot.
-    AgentScope intentionally bypassed — too slow and fragile for real-time chat.
+    AI Advisor: google-genai (direct) -> LangChain Gemini -> Groq -> Internal Fallback.
     """
     session_factory = RuralSessionLocal if user.business_type == "rural" else UrbanSessionLocal
     db = session_factory()
@@ -252,9 +251,52 @@ async def advisor_chat(req: AdvisorRequest, user: models.User = Depends(get_curr
     if not last_user_message:
         return {"reply": "I'm listening! What's on your mind today?"}
 
+    system_prompt = _build_system_prompt(user, db)
     gemini_key = os.environ.get("GEMINI_API_KEY")
 
-    # --- PRIMARY: Direct Gemini 2.0 Flash (fast, reliable, no AgentScope overhead) ---
+    # --- PRIMARY: Native google-genai SDK (most reliable on Render) ---
+    if gemini_key:
+        try:
+            from google import genai
+            from google.genai import types as genai_types
+
+            client = genai.Client(api_key=gemini_key)
+
+            # Build message history for context
+            chat_history = []
+            for msg in req.messages[:-1]:  # All messages except the last (current)
+                role = "user" if msg.role == "user" else "model"
+                chat_history.append(genai_types.Content(role=role, parts=[genai_types.Part(text=msg.content)]))
+
+            response = client.models.generate_content(
+                model="gemini-2.0-flash",
+                contents=chat_history + [
+                    genai_types.Content(role="user", parts=[genai_types.Part(text=last_user_message)])
+                ],
+                config=genai_types.GenerateContentConfig(
+                    system_instruction=system_prompt,
+                    temperature=0.75,
+                    max_output_tokens=4096,
+                )
+            )
+
+            reply_text = response.text.strip() if response.text else ""
+            if reply_text:
+                # Save to chat history DB
+                try:
+                    db2 = session_factory()
+                    db2.add(models.ChatMessage(user_id=user.id, role="user", content=last_user_message))
+                    db2.add(models.ChatMessage(user_id=user.id, role="assistant", content=reply_text))
+                    db2.commit()
+                    db2.close()
+                except Exception:
+                    pass
+                db.close()
+                return {"reply": reply_text}
+        except Exception as e:
+            print(f"[google-genai Failure] {type(e).__name__}: {e}. Trying LangChain...")
+
+    # --- SECONDARY: LangChain Gemini (with full chat history) ---
     if gemini_key:
         try:
             from langchain_google_genai import ChatGoogleGenerativeAI
@@ -268,9 +310,9 @@ async def advisor_chat(req: AdvisorRequest, user: models.User = Depends(get_curr
             db.close()
             return result
         except Exception as e:
-            print(f"[Gemini Failure] {e}. Falling back to Groq...")
+            print(f"[LangChain Gemini Failure] {type(e).__name__}: {e}. Trying Groq...")
 
-    # --- SECONDARY: Groq (fast open-source fallback) ---
+    # --- TERTIARY: Groq (fast open-source LLM) ---
     groq_key = os.environ.get("GROQ_API_KEY")
     if groq_key:
         try:
@@ -285,10 +327,12 @@ async def advisor_chat(req: AdvisorRequest, user: models.User = Depends(get_curr
             db.close()
             return result
         except Exception as e:
-            print(f"[Groq Failure] {e}. Falling back to Internal Snapshot...")
+            print(f"[Groq Failure] {type(e).__name__}: {e}. Using internal fallback...")
 
-    # --- FINAL: Deterministic keyword-aware fallback ---
+    # --- FINAL: Keyword-based deterministic fallback ---
+    print("[Advisor] All AI providers failed. Using internal fallback.")
     return run_internal_fallback(user, db, last_user_message)
+
 
 def run_ai_chain(llm, user, db, user_input, session_factory):
     """LangChain execution logic — builds a rich, data-aware system prompt and invokes the LLM with chat history."""

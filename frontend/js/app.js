@@ -214,34 +214,34 @@ window.initApp = async function() {
         
         // Render initial view - pass locking state to switchTab to properly gray out other tabs
         window.switchTab(startTab, window._appLocked);
-        // Reveal bottom nav — guarantee it always shows even if fonts.ready stalls or DOM is slow
+        // Reveal bottom nav — immediately attempt, then poll as safety net
         const revealBottomNav = () => {
             const nav = document.getElementById('app-bottom-nav');
-            if (nav) {
-                if (!nav.classList.contains('nav-ready')) {
-                    nav.classList.add('nav-ready');
-                    console.log("[Nav] Revealed bottom navigation.");
-                }
+            if (nav && !nav.classList.contains('nav-ready')) {
+                nav.classList.add('nav-ready');
+                console.log("[Nav] Revealed bottom navigation.");
                 return true;
             }
-            return false;
+            return !!nav;
         };
 
-        // Persistent polling (every 100ms for up to 1.5s) to handle slow DOM injection on mobile
-        let navPollCount = 0;
-        const navPollInterval = setInterval(() => {
-            if (revealBottomNav() || navPollCount > 15) {
-                clearInterval(navPollInterval);
-                // Last ditch effort if polling failed
-                if (navPollCount > 15) revealBottomNav();
-            }
-            navPollCount++;
-        }, 100);
-
-        // Also tie to font load as a secondary trigger
-        if (document.fonts && document.fonts.ready) {
-            document.fonts.ready.then(revealBottomNav).catch(revealBottomNav);
+        // 1. Immediate attempt (works on desktop and fast mobile)
+        if (!revealBottomNav()) {
+            // 2. Poll every 50ms for up to 1 second (handles slow mobile DOM injection)
+            let navPollCount = 0;
+            const navPollInterval = setInterval(() => {
+                if (revealBottomNav() || navPollCount > 20) {
+                    clearInterval(navPollInterval);
+                }
+                navPollCount++;
+            }, 50);
         }
+
+        // 3. Hard guarantee: force reveal after 800ms no matter what
+        setTimeout(() => {
+            const nav = document.getElementById('app-bottom-nav');
+            if (nav) nav.classList.add('nav-ready');
+        }, 800);
 
         // ── PWA Install Button ─────────────────────────────────────────────────
         window._onInstallPromptReady = () => {

@@ -106,23 +106,7 @@ body {
     z-index: 1000;
 }
 
-.bottom-nav {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    background: var(--glass-bg);
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
-    backdrop-filter: blur(24px) saturate(180%);
-    border-top: 1px solid var(--glass-border);
-    z-index: 1000;
-    padding-bottom: env(safe-area-inset-bottom);
-    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease;
-    opacity: 0;
-    transform: translateY(100%);
-    display: flex;
-    justify-content: center;
-}
+
 
 .header-logo {
     display: flex;
@@ -190,18 +174,17 @@ body {
     justify-content: center;
     align-items: flex-start;
     border-top: 1px solid var(--border-color);
-    z-index: 5000; /* Ensure it stays above everything */
+    z-index: 5000;
     padding-bottom: env(safe-area-inset-bottom, 0px);
-    /* Start hidden; JS reveals it after Boxicons font loads to prevent
-       the misaligned flash-of-unstyled-text bug on first login. */
+    /* Hidden initially; JS adds nav-ready after DOM is ready */
     opacity: 0;
-    transform: translateY(8px);
-    transition: opacity 0.35s ease, transform 0.35s ease;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
 }
 
 .bottom-nav.nav-ready {
     opacity: 1;
-    transform: translateY(0);
+    pointer-events: auto;
 }
 
 .nav-container {
