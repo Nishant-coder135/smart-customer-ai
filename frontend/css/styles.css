@@ -176,10 +176,10 @@ body {
     border-top: 1px solid var(--border-color);
     z-index: 5000;
     padding-bottom: env(safe-area-inset-bottom, 0px);
-    /* Hidden initially; JS adds nav-ready after DOM is ready */
-    opacity: 0;
+    /* VISIBILITY: Always visible structure to prevent mobile race conditions */
+    opacity: 1;
     pointer-events: none;
-    transition: opacity 0.3s ease;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .bottom-nav.nav-ready {

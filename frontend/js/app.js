@@ -139,20 +139,13 @@ window.switchTab = function(tabName, forced = false) {
             if (typeof showToast === 'function') showToast("Error loading view. Please retry.", "error");
         }
 
-        // ALWAYS guarantee the bottom nav is visible after any tab switch
-        // This handles the case where async renders (like DashboardView) may
-        // cause layout shifts that push/cover the nav.
-        const guaranteeNav = () => {
-            const nav = document.getElementById('app-bottom-nav');
-            if (nav) {
-                nav.classList.add('nav-ready');
-                nav.style.opacity = '1';
-                nav.style.pointerEvents = 'auto';
-            }
-        };
-        guaranteeNav(); // immediate
-        setTimeout(guaranteeNav, 400);  // after DashboardView async second render
-        setTimeout(guaranteeNav, 1200); // extra safety for slow network loads
+        // No longer need complex timeout hacks as nav is structurally visible by default.
+        // We just ensure the ready state is applied.
+        const nav = document.getElementById('app-bottom-nav');
+        if (nav) nav.classList.add('nav-ready');
+        
+        if (viewLoader) viewLoader.classList.remove('active');
+        window.scrollTo({ top: 0, behavior: 'instant' });
     }, 300);
 };
 
@@ -212,9 +205,9 @@ window.initApp = async function() {
         if (dashData.mode === 'urban' && dashData.has_data === false && !persistentlyUnlocked) {
             window._appLocked = true;
             startTab = 'data';
-            setTimeout(() => {
+            if (typeof showToast === 'function') {
                 showToast("Action Required: Please upload your retail CSV to activate AI Dashboard.", "warning", 6000);
-            }, 1000);
+            }
         } else if (dashData.has_data === true) {
             // Guarantee persistence if backend says we have data
             localStorage.setItem('sc_app_unlocked', 'true');
@@ -227,30 +220,8 @@ window.initApp = async function() {
         
         renderMainShell(dashData.mode || localStorage.getItem('businessMode') || 'urban', newPhone, dashData.kpis?.active_customers || 0);
         
-        // Render initial view - pass locking state to switchTab to properly gray out other tabs
+        // Initial Tab & Nav Unlock
         window.switchTab(startTab, window._appLocked);
-        // Reveal bottom nav — immediately attempt, then poll as safety net
-        const revealBottomNav = () => {
-            const nav = document.getElementById('app-bottom-nav');
-            if (nav && !nav.classList.contains('nav-ready')) {
-                nav.classList.add('nav-ready');
-                console.log("[Nav] Revealed bottom navigation.");
-                return true;
-            }
-            return !!nav;
-        };
-
-        // 1. Immediate attempt (works on desktop and fast mobile)
-        if (!revealBottomNav()) {
-            // 2. Poll every 50ms for up to 1 second (handles slow mobile DOM injection)
-            let navPollCount = 0;
-            const navPollInterval = setInterval(() => {
-                if (revealBottomNav() || navPollCount > 20) {
-                    clearInterval(navPollInterval);
-                }
-                navPollCount++;
-            }, 50);
-        }
 
         // 3. Hard guarantee: force reveal after 800ms no matter what
         setTimeout(() => {
