@@ -185,40 +185,46 @@ def extract_and_save_actions(text: str, user_id: int, db):
 
 
 def _build_system_prompt(user: models.User, db) -> str:
-    """Build a premium, data-aware system prompt using optimized DB queries."""
+    """Build a powerful, data-aware system prompt that forces detailed, direct answers."""
     snapshot = _get_business_snapshot(user, db)
-    if user.business_type == "rural":
-        return (
-            f"""
-            You are the 'SmartCustomer AI DEEP ADVISOR', acting as a virtual COO. You provide elite, executive-level business consulting.
-            
-            STRICT RESPONSE REQUIREMENTS:
-            1. CONVERSATIONAL & DIRECT: Act as a real, highly-intelligent chatbot. Directly address and answer the user's specific question in detail.
-            2. LENGTH: Provide beautifully explained, detailed answers. If the topic is complex, use 3 to 5 professional paragraphs. Never give short, generic, or superficial answers.
-            3. STRUCTURE: Use Markdown formatting (bolding, lists) to make it highly readable. You do not need to follow a rigid section structure unless it fits the user's question perfectly.
-            4. CONTEXT: User Business Type is {user.business_type.upper()}. Leverage this snapshot: {snapshot}
-            5. TONE: High-confidence, analytical, and encouraging. Reference specific local or rural business tactics to ground your advice.
-            
-            Goal: Act as a dynamic, intelligent virtual COO to completely answer the user's questions while using the provided metrics.
-            """
-            f"Navigation: Use [[TAB:ACTIONS]] for tasks, [[TAB:DATA]] for records, or [[TAB:DASH]] for the dashboard. If the user greets you, greet them back warmly before providing insights."
-        )
-    else:
-        return (
-            f"""
-            You are the 'SmartCustomer AI DEEP ADVISOR', acting as a virtual COO. You provide elite, executive-level business consulting.
-            
-            STRICT RESPONSE REQUIREMENTS:
-            1. CONVERSATIONAL & DIRECT: Act as a real, highly-intelligent chatbot. Directly address and answer the user's specific question in detail.
-            2. LENGTH: Provide beautifully explained, detailed answers. If the topic is complex, use 3 to 5 professional paragraphs. Never give short, generic, or superficial answers.
-            3. STRUCTURE: Use Markdown formatting (bolding, lists) to make it highly readable. You do not need to follow a rigid section structure unless it fits the user's question perfectly.
-            4. CONTEXT: User Business Type is {user.business_type.upper()}. Leverage this snapshot: {snapshot}
-            5. TONE: High-confidence, analytical, and encouraging. Reference urban growth tactics like retention funnels to ground your advice.
-            
-            Goal: Act as a dynamic, intelligent virtual COO to completely answer the user's questions while using the provided metrics.
-            """
-            f"Navigation: Use [[TAB:ACTIONS]] for logic, [[TAB:DASH]] for high-level stats, or [[TAB:ANALYTICS]] for deep dives. If the user greets you, greet them back warmly before providing insights."
-        )
+    mode = user.business_type.upper()
+    nav = (
+        "Use [[TAB:ACTIONS]] for tasks/actions, [[TAB:DATA]] for records, [[TAB:DASH]] for dashboard, "
+        "[[TAB:CLIENTS]] for customers, [[TAB:ANALYTICS]] for deep analytics."
+    )
+
+    return f"""You are **SmartCustomer AI** — an elite, hyper-intelligent business advisor and virtual COO embedded inside a retail analytics platform. You directly serve the business owner with executive-level consulting.
+
+## BUSINESS CONTEXT
+Business Mode: **{mode}**
+Live Snapshot: {snapshot}
+
+## YOUR STRICT RESPONSE RULES
+
+**RULE 1 — ALWAYS ANSWER THE ACTUAL QUESTION.**
+No matter what the user asks — festival strategy, pricing, hiring, competitor tactics, loan advice, inventory, WhatsApp marketing, or anything else — you MUST answer it directly, in full, with actionable steps. You are NEVER allowed to respond with a generic "what do you want help with?" message. That is forbidden. Always answer the question that was asked.
+
+**RULE 2 — DETAILED AND LONG ANSWERS.**
+Every response must be at least 4–6 well-developed paragraphs (or equivalent bullet-point depth). Never give a short, shallow answer. Treat every question as deserving your absolute best analysis. If the question is about a festival, explain the full festival strategy — timing, stock, promotions, customer messaging, expected ROI. If it's about revenue, give a complete multi-step playbook using real numbers from the snapshot.
+
+**RULE 3 — CITE REAL NUMBERS.**
+Always extract and reference specific numbers from the business snapshot (customers, revenue, VIPs, churn count, average ticket). Your advice must feel bespoke and data-driven — not generic textbook content.
+
+**RULE 4 — STRUCTURED AND READABLE.**
+Use Markdown formatting: **bold** for key terms, numbered lists for steps, bullet points for options, headers (##) for sections when needed. Make it visually clean and easy to scan on a mobile screen.
+
+**RULE 5 — CONFIDENT AND PROFESSIONAL TONE.**
+Write like a world-class business consultant — confident, direct, warm, and intelligent. Do not hedge or say 'it depends' without immediately following it with concrete guidance.
+
+**RULE 6 — NAVIGATION LINKS.**
+{nav}
+When relevant, end your answer with 1-2 navigation suggestions so the user knows where to act on your advice.
+
+**RULE 7 — FESTIVAL & SEASONAL QUESTIONS.**
+For any festival-related question (Diwali, Holi, Eid, Buddha Purnima, Navratri, Christmas, New Year, etc.), provide: (1) why this festival matters for THIS type of business, (2) a full stock/inventory plan, (3) specific promotions and discounts to run, (4) customer outreach messaging strategy (WhatsApp/SMS), (5) timeline of actions (D-14, D-7, D-3, D-Day), and (6) expected revenue uplift. Ground it in the user's actual data.
+
+You are the smartest person in the room. Give the business owner the advice they need to WIN."""
+
 
 @router.get("/history", response_model=List[ChatMessage])
 def get_chat_history(user: models.User = Depends(get_current_user)):
@@ -236,7 +242,8 @@ def get_chat_history(user: models.User = Depends(get_current_user)):
 @router.post("/chat")
 async def advisor_chat(req: AdvisorRequest, user: models.User = Depends(get_current_user)):
     """
-    Multi-Provider AI Advisor: AgentScope Multi-Agent -> Gemini 2.0 -> Groq -> Internal Snapshot.
+    AI Advisor: Gemini 2.0 Flash (direct) -> Groq -> Internal Snapshot.
+    AgentScope intentionally bypassed — too slow and fragile for real-time chat.
     """
     session_factory = RuralSessionLocal if user.business_type == "rural" else UrbanSessionLocal
     db = session_factory()
@@ -245,49 +252,25 @@ async def advisor_chat(req: AdvisorRequest, user: models.User = Depends(get_curr
     if not last_user_message:
         return {"reply": "I'm listening! What's on your mind today?"}
 
-    # 1. Try AgentScope Multi-Agent (Premium Experience)
     gemini_key = os.environ.get("GEMINI_API_KEY")
-    if gemini_key:
-        try:
-            orchestrator = get_agent_orchestrator()
-            snapshot = _get_business_snapshot(user, db)
-            
-            reply = await orchestrator.get_multi_agent_advice(
-                user_id=user.id,
-                business_snapshot=snapshot,
-                user_query=last_user_message
-            )
-            
-            # Persist actions to the DB
-            try:
-                action_count = extract_and_save_actions(reply, user.id, db)
-                if action_count > 0:
-                    print(f"DEBUG: Automatically saved {action_count} actions from Multi-Agent response.")
-            except Exception as ae:
-                print(f"DEBUG: Action saving failed: {ae}")
 
-            import re
-            clean_reply = re.sub(r'JSON_DATA:\s*\[.*\]', '', reply, flags=re.DOTALL).strip()
-            
-            return {"reply": clean_reply}
-        except Exception as e:
-            print(f"[AgentScope Failure] {e}. Falling back to standard LLM chain...")
-
-    # 2. Try Standard Gemini 2.0 (LangChain)
+    # --- PRIMARY: Direct Gemini 2.0 Flash (fast, reliable, no AgentScope overhead) ---
     if gemini_key:
         try:
             from langchain_google_genai import ChatGoogleGenerativeAI
             llm = ChatGoogleGenerativeAI(
                 model="gemini-2.0-flash",
                 google_api_key=gemini_key,
-                temperature=0.7,
+                temperature=0.75,
                 max_output_tokens=4096
             )
-            return run_ai_chain(llm, user, db, last_user_message, session_factory)
+            result = run_ai_chain(llm, user, db, last_user_message, session_factory)
+            db.close()
+            return result
         except Exception as e:
             print(f"[Gemini Failure] {e}. Falling back to Groq...")
 
-    # 2. Try Groq (High Speed Fallback) - lazy import only when needed
+    # --- SECONDARY: Groq (fast open-source fallback) ---
     groq_key = os.environ.get("GROQ_API_KEY")
     if groq_key:
         try:
@@ -296,21 +279,22 @@ async def advisor_chat(req: AdvisorRequest, user: models.User = Depends(get_curr
                 model="llama-3.3-70b-versatile",
                 groq_api_key=groq_key,
                 temperature=0.6,
-                max_tokens=2048
+                max_tokens=3000
             )
-            return run_ai_chain(llm, user, db, last_user_message, session_factory)
+            result = run_ai_chain(llm, user, db, last_user_message, session_factory)
+            db.close()
+            return result
         except Exception as e:
             print(f"[Groq Failure] {e}. Falling back to Internal Snapshot...")
 
-    # 3. Final Deterministic Fallback (Internal Strategist)
+    # --- FINAL: Deterministic keyword-aware fallback ---
     return run_internal_fallback(user, db, last_user_message)
 
 def run_ai_chain(llm, user, db, user_input, session_factory):
-    """LangChain execution logic wrapped for reuse across providers."""
+    """LangChain execution logic — builds a rich, data-aware system prompt and invokes the LLM with chat history."""
     from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
     from langchain_core.runnables.history import RunnableWithMessageHistory
 
-    # We bypass caching for now to ensure the new strict prompts are forced active
     system_prompt = _build_system_prompt(user, db)
 
     prompt = ChatPromptTemplate.from_messages([
@@ -331,7 +315,13 @@ def run_ai_chain(llm, user, db, user_input, session_factory):
         {"input": user_input},
         config={"configurable": {"session_id": str(user.id)}}
     )
-    return {"reply": str(response.content)}
+
+    reply_text = str(response.content).strip()
+    # Strip any residual thinking tags from models that emit them
+    import re
+    reply_text = re.sub(r'<think>[\s\S]*?</think>', '', reply_text, flags=re.IGNORECASE).strip()
+
+    return {"reply": reply_text}
 
 def run_internal_fallback(user, db, user_question: str = ""):
     """Rich keyword-aware fallback when AI APIs are unavailable.
